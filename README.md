@@ -54,7 +54,7 @@ cd FYP_1
 # Install dependencies
 pip install pandas numpy scikit-learn ydata-profiling
 
-# (More dependencies to be added as project develops)
+# (More dependencies to be added)
 ```
 
 ## Project Structure
