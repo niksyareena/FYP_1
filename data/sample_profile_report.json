@@ -1,0 +1,108 @@
+{
+  "dataset_level": {
+    "n_rows": 10,
+    "n_columns": 5,
+    "dtypes": {
+      "age": "float64",
+      "income": "float64",
+      "education": "object",
+      "occupation": "object",
+      "city": "object"
+    },
+    "non_null_counts": {
+      "age": 9,
+      "income": 9,
+      "education": 10,
+      "occupation": 9,
+      "city": 10
+    },
+    "missing_counts": {
+      "age": 1,
+      "income": 1,
+      "education": 0,
+      "occupation": 1,
+      "city": 0
+    },
+    "missing_percentages": {
+      "age": 10.0,
+      "income": 10.0,
+      "education": 0.0,
+      "occupation": 10.0,
+      "city": 0.0
+    },
+    "n_duplicates": 1,
+    "duplicate_percentage": 10.0,
+    "memory_mb": 0.0
+  },
+  "numeric_columns": {
+    "columns": {
+      "age": {
+        "count": 9,
+        "mean": 40.55555555555556,
+        "median": 35.0,
+        "std": 12.360330811826104,
+        "min": 25.0,
+        "max": 60.0,
+        "q25": 30.0,
+        "q75": 50.0,
+        "skewness": 0.4116121497973633
+      },
+      "income": {
+        "count": 9,
+        "mean": 64444.444444444445,
+        "median": 60000.0,
+        "std": 22142.217092644038,
+        "min": 30000.0,
+        "max": 95000.0,
+        "q25": 45000.0,
+        "q75": 80000.0,
+        "skewness": -0.08270366080853413
+      }
+    },
+    "correlation_matrix": {
+      "age": {
+        "age": 1.0,
+        "income": 0.9874379667562074
+      },
+      "income": {
+        "age": 0.9874379667562074,
+        "income": 1.0
+      }
+    }
+  },
+  "categorical_columns": {
+    "columns": {
+      "education": {
+        "count": 10,
+        "cardinality": 4,
+        "mode": "Bachelors",
+        "top_5_values": {
+          "HS-grad": 3,
+          "Bachelors": 3,
+          "Masters": 2,
+          "Doctorate": 2
+        }
+      },
+      "occupation": {
+        "count": 9,
+        "cardinality": 3,
+        "mode": "Tech",
+        "top_5_values": {
+          "Tech": 4,
+          "Management": 3,
+          "Sales": 2
+        }
+      },
+      "city": {
+        "count": 10,
+        "cardinality": 3,
+        "mode": "LA",
+        "top_5_values": {
+          "NY": 4,
+          "LA": 4,
+          "SF": 2
+        }
+      }
+    }
+  }
+}
