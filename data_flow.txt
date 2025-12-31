@@ -1,0 +1,49 @@
+ Data flow sample:
+ 
+                    ┌─────────────────┐
+                    │  Load Dataset   │
+                    │  (32,561 rows)  │
+                    └────────┬────────┘
+                             │
+                             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  STEP 1: DATA PROFILING (Before)                                │
+│  • Count rows, columns, dtypes                                  │
+│  • Calculate missing values                                     │
+│  • Generate statistics                                          │
+│  → Saves: adult_profile_before.json                             │
+└─────────────────────────────────────────────────────────────────┘
+                             │
+                             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  STEP 2: FORMAT CORRECTION                                      │
+│  • Trim whitespace                                              │
+│  • Convert to lowercase                                         │
+│  • Standardize dates (if any)                                   │
+│  • Fix data types                                               │
+│  → Saves: adult_format_corrections.json                         │
+└─────────────────────────────────────────────────────────────────┘
+                             │
+                             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  STEP 3: DUPLICATE DETECTION                                    │
+│  • Find exact duplicate rows (24 found)                         │
+│  • Display duplicate groups                                     │
+│  • Remove duplicates (keep first)                               │
+│  → Saves: adult_duplicates.json                                 │
+│  → Result: 32,537 rows                                          │
+└─────────────────────────────────────────────────────────────────┘
+                             │
+                             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  STEP 4: DATA PROFILING (After)                                 │
+│  • Re-analyze cleaned data                                      │
+│  • Compare before/after                                         │
+│  → Saves: adult_profile_after.json                              │
+└─────────────────────────────────────────────────────────────────┘
+                             │
+                             ▼
+                    ┌─────────────────┐
+                    │  Save Cleaned   │
+                    │  Dataset (CSV)  │
+                    └─────────────────┘

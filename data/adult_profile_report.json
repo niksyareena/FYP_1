@@ -21,53 +21,53 @@
     },
     "non_null_counts": {
       "age": 32561,
-      "workclass": 32561,
+      "workclass": 30725,
       "fnlwgt": 32561,
       "education": 32561,
       "education-num": 32561,
       "marital-status": 32561,
-      "occupation": 32561,
+      "occupation": 30718,
       "relationship": 32561,
       "race": 32561,
       "sex": 32561,
       "capital-gain": 32561,
       "capital-loss": 32561,
       "hours-per-week": 32561,
-      "native-country": 32561,
+      "native-country": 31978,
       "income": 32561
     },
     "missing_counts": {
       "age": 0,
-      "workclass": 0,
+      "workclass": 1836,
       "fnlwgt": 0,
       "education": 0,
       "education-num": 0,
       "marital-status": 0,
-      "occupation": 0,
+      "occupation": 1843,
       "relationship": 0,
       "race": 0,
       "sex": 0,
       "capital-gain": 0,
       "capital-loss": 0,
       "hours-per-week": 0,
-      "native-country": 0,
+      "native-country": 583,
       "income": 0
     },
     "missing_percentages": {
       "age": 0.0,
-      "workclass": 0.0,
+      "workclass": 5.638647461687294,
       "fnlwgt": 0.0,
       "education": 0.0,
       "education-num": 0.0,
       "marital-status": 0.0,
-      "occupation": 0.0,
+      "occupation": 5.660145572924664,
       "relationship": 0.0,
       "race": 0.0,
       "sex": 0.0,
       "capital-gain": 0.0,
       "capital-loss": 0.0,
       "hours-per-week": 0.0,
-      "native-country": 0.0,
+      "native-country": 1.7904855501980899,
       "income": 0.0
     },
     "n_duplicates": 24,
@@ -197,8 +197,8 @@
   "categorical_columns": {
     "columns": {
       "workclass": {
-        "count": 32561,
-        "cardinality": 9,
+        "count": 30725,
+        "cardinality": 8,
         "mode": "Private"
       },
       "education": {
@@ -212,8 +212,8 @@
         "mode": "Married-civ-spouse"
       },
       "occupation": {
-        "count": 32561,
-        "cardinality": 15,
+        "count": 30718,
+        "cardinality": 14,
         "mode": "Prof-specialty"
       },
       "relationship": {
@@ -232,8 +232,8 @@
         "mode": "Male"
       },
       "native-country": {
-        "count": 32561,
-        "cardinality": 42,
+        "count": 31978,
+        "cardinality": 41,
         "mode": "United-States"
       },
       "income": {

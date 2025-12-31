@@ -5,7 +5,7 @@ Generates comprehensive dataset overview and statistics
 
 import pandas as pd
 import numpy as np
-from typing import Dict, Any
+from typing import Dict, Any, List, Optional
 
 
 class DataProfiler:
@@ -16,53 +16,80 @@ class DataProfiler:
     - Categorical column statistics (cardinality, mode, distributions)
     """
     
-    def __init__(self):
-        self.profile = {}
-    
-    def generate_profile(self, df: pd.DataFrame) -> Dict[str, Any]:
+    def __init__(self, additional_na_values: Optional[List[str]] = None):
         """
-        Main method - generates complete profile
+        Initialize profiler
         
         Args:
-            df: Input dataframe
+            additional_na_values: List of strings to treat as missing values
+                                 (e.g., [' ?', '?', 'NA', 'N/A', 'unknown'])
+        """
+        self.profile = {}
+        # Default missing value indicators
+        self.na_values = [' ?', '?', 'NA', 'N/A', 'na', 'n/a', 
+                         'NULL', 'null', 'None', 'none', '', ' ', 
+                         'unknown', 'Unknown', 'UNKNOWN', 'missing', 'Missing', '-']
+        
+        if additional_na_values:
+            self.na_values.extend(additional_na_values)
+    
+    def count_missing(self, series: pd.Series) -> int:
+        """
+        Count missing values including NaN and other representations
+        
+        Args:
+            series: pandas Series to check
             
         Returns:
-            Dictionary with all profiling information
+            Count of missing values
         """
+        # Count NaN values
+        nan_count = series.isnull().sum()
+        
+        # Count other missing value representations (for object/string columns)
+        if series.dtype == 'object':
+            for na_val in self.na_values:
+                nan_count += (series == na_val).sum()
+        
+        return int(nan_count)
+    
+    #main method - generates full profile
+    def generate_profile(self, df: pd.DataFrame) -> Dict[str, Any]:
+        
         self.profile = {
-            'dataset_level': self._profile_dataset(df),
-            'numeric_columns': self._profile_numeric(df),
-            'categorical_columns': self._profile_categorical(df)
+            'dataset_level': self.profile_dataset(df),
+            'numeric_columns': self.profile_numeric(df),
+            'categorical_columns': self.profile_categorical(df)
         }
         
         return self.profile
     
-    def _profile_dataset(self, df: pd.DataFrame) -> Dict[str, Any]:
-        """
-        Dataset-level statistics
-        """
-        # Basic shape
+    #dataset level stats
+    def profile_dataset(self, df: pd.DataFrame) -> Dict[str, Any]:
+    
+        #basic shape
         n_rows, n_cols = df.shape
         
-        # Data types
+        #data types
         dtypes = df.dtypes.astype(str).to_dict()
         
-        # Missing values
-        # Missing values
-        missing_counts_series = df.isnull().sum()
-        missing_percentages_series = (missing_counts_series / len(df) * 100)
-        missing_counts = dict(missing_counts_series)
-        missing_percentages = dict(missing_percentages_series)
+        #missing values (enhanced detection)
+        missing_counts = {}
+        missing_percentages = {}
+        non_null_counts = {}
         
-        # Non-null counts (from df.info())
-        non_null_counts = df.count().to_dict()
+        for col in df.columns:
+            missing_count = self._count_missing(df[col])
+            missing_counts[col] = missing_count
+            missing_percentages[col] = (missing_count / len(df) * 100) if len(df) > 0 else 0
+            non_null_counts[col] = len(df) - missing_count
         
-        # Duplicates (rows only, not columns)
+        #duplicates (rows only, not columns)
         n_duplicates = df.duplicated().sum()
         duplicate_percentage = (n_duplicates / len(df) * 100) if len(df) > 0 else 0
         
-        # Memory
-        memory_usage = df.memory_usage(deep=True).sum() / (1024 ** 2)  # MB
+        #memory
+        memory_usage = df.memory_usage(deep=True).sum() / (1024 ** 2)  #MB
         
         return {
             'n_rows': int(n_rows),
@@ -76,10 +103,9 @@ class DataProfiler:
             'memory_mb': round(float(memory_usage), 2)
         }
     
-    def _profile_numeric(self, df: pd.DataFrame) -> Dict[str, Any]:
-        """
-        Numeric column statistics
-        """
+    #numeric column stats
+    def profile_numeric(self, df: pd.DataFrame) -> Dict[str, Any]:
+      
         numeric_cols = df.select_dtypes(include=[np.number]).columns
         
         if len(numeric_cols) == 0:
@@ -88,11 +114,14 @@ class DataProfiler:
         numeric_profile = {}
         
         for col in numeric_cols:
-            # Calculate skewness
+            #calculate skewness
             skew_val = df[col].skew()
             
+            # Use custom missing count
+            non_null_count = len(df) - self.count_missing(df[col])
+            
             numeric_profile[col] = {
-                'count': int(df[col].count()),  # Non-null count
+                'count': int(non_null_count),  #non-null count
                 'mean': float(df[col].mean()) if not df[col].isna().all() else None,
                 'median': float(df[col].median()) if not df[col].isna().all() else None,
                 'std': float(df[col].std()) if not df[col].isna().all() else None,
@@ -100,10 +129,10 @@ class DataProfiler:
                 'max': float(df[col].max()) if not df[col].isna().all() else None,
                 'q25': float(df[col].quantile(0.25)) if not df[col].isna().all() else None,
                 'q75': float(df[col].quantile(0.75)) if not df[col].isna().all() else None,
-                'skewness': float(skew_val) if pd.notna(skew_val) else None  # Distribution shape
+                'skewness': float(skew_val) if pd.notna(skew_val) else None  #distribution shape
             }
         
-        # Correlation matrix
+        #correlation matrix
         correlation_matrix = df[numeric_cols].corr()
         
         return {
@@ -111,10 +140,9 @@ class DataProfiler:
             'correlation_matrix': correlation_matrix
         }
     
-    def _profile_categorical(self, df: pd.DataFrame) -> Dict[str, Any]:
-        """
-        Categorical column statistics
-        """
+    #categorical column stats
+    def profile_categorical(self, df: pd.DataFrame) -> Dict[str, Any]:
+        
         categorical_cols = df.select_dtypes(include=['object', 'category']).columns
         
         if len(categorical_cols) == 0:
@@ -123,11 +151,18 @@ class DataProfiler:
         categorical_profile = {}
         
         for col in categorical_cols:
-            value_counts = df[col].value_counts()
+            # Use custom missing count
+            non_null_count = len(df) - self.count_missing(df[col])
+            
+            # Calculate cardinality excluding missing values
+            unique_count = df[col].nunique()
+            for na_val in self.na_values:
+                if na_val in df[col].values:
+                    unique_count -= 1
             
             categorical_profile[col] = {
-                'count': int(df[col].count()),  # Non-null count
-                'cardinality': int(df[col].nunique()),
+                'count': int(non_null_count),  #non-null count
+                'cardinality': int(max(0, unique_count)),
                 'mode': str(df[col].mode()[0]) if not df[col].mode().empty else None
             }
         
@@ -135,10 +170,9 @@ class DataProfiler:
             'columns': categorical_profile
         }
     
+    #summary of dataset
     def print_summary(self):
-        """
-        Print human-readable summary to console
-        """
+        
         if not self.profile:
             print("No profile generated yet. Run generate_profile() first.")
             return
@@ -149,19 +183,19 @@ class DataProfiler:
         print("DATASET PROFILE SUMMARY".center(70))
         print("=" * 70)
         
-        # Dataset level
+        #dataset level
         print(f"\n📊 DATASET OVERVIEW")
         print(f"   {'Rows:':<20} {dataset['n_rows']:>10,}")
         print(f"   {'Columns:':<20} {dataset['n_columns']:>10}")
         print(f"   {'Memory Usage:':<20} {dataset['memory_mb']:>10} MB")
         print(f"   {'Duplicate Rows:':<20} {dataset['n_duplicates']:>10} ({dataset['duplicate_percentage']:.2f}%)")
         
-        # Missing values summary
+        #missing values summary
         total_missing = sum(dataset['missing_counts'].values())
         missing_cols = len([v for v in dataset['missing_percentages'].values() if v > 0])
         print(f"   {'Missing Values:':<20} {total_missing:>10} ({missing_cols} columns affected)")
         
-        # Data types
+        #data types
         print(f"\n📋 COLUMN DATA TYPES")
         print(f"   {'Column':<20} {'Type':<15} {'Non-Null Count':<15}")
         print(f"   {'-'*20} {'-'*15} {'-'*15}")
@@ -169,7 +203,7 @@ class DataProfiler:
             non_null = dataset['non_null_counts'][col]
             print(f"   {col:<20} {dtype:<15} {non_null:<15,}")
         
-        # Missing values detail (if any)
+        #missing values detail (if any)
         missing = {k: v for k, v in dataset['missing_percentages'].items() if v > 0}
         if missing:
             print(f"\n❓ MISSING VALUES DETAIL")
@@ -180,8 +214,7 @@ class DataProfiler:
        
         
         
-        
-        # Numeric columns
+        #numeric columns
         if self.profile['numeric_columns']['columns']:
             print(f"\n🔢 NUMERIC COLUMNS ({len(self.profile['numeric_columns']['columns'])} total)")
             print(f"   {'Column':<20} {'Mean':<12} {'Std':<12} {'Min':<12} {'Max':<12}")
@@ -190,14 +223,14 @@ class DataProfiler:
                 if stats['mean'] is not None:
                     print(f"   {col:<20} {stats['mean']:<12.2f} {stats['std']:<12.2f} {stats['min']:<12.2f} {stats['max']:<12.2f}")
             
-            # Correlation matrix
+            #correlation matrix
             if 'correlation_matrix' in self.profile['numeric_columns']:
                 corr_matrix = self.profile['numeric_columns']['correlation_matrix']
                 if hasattr(corr_matrix, 'shape') and corr_matrix.shape[0] > 1:
                     print(f"\n🔗 CORRELATION MATRIX")
                     print(corr_matrix.to_string())
         
-        # Categorical columns
+        #categorical columns
         if self.profile['categorical_columns']['columns']:
             print(f"\n📝 CATEGORICAL COLUMNS ({len(self.profile['categorical_columns']['columns'])} total)")
             print(f"   {'Column':<20} {'Unique Values':<15} {'Mode':<30}")
@@ -208,20 +241,16 @@ class DataProfiler:
         
         print("\n" + "=" * 70)
     
+    #save profiling report to json file
     def save_report(self, filepath: str):
-        """
-        Save profile to JSON file
         
-        Args:
-            filepath: Path to save JSON report
-        """
         import json
         
         if not self.profile:
             print("No profile generated yet. Run generate_profile() first.")
             return
         
-        # Convert non-serializable objects
+        #convert non-serializable objects
         profile_copy = self.profile.copy()
         if 'correlation_matrix' in profile_copy.get('numeric_columns', {}):
             corr_matrix = profile_copy['numeric_columns']['correlation_matrix']
