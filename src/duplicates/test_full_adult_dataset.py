@@ -9,7 +9,7 @@ sys.path.insert(0, 'src')
 from duplicates.duplicate_detector import DuplicateDetector
 from format_correction.format_corrector import FormatCorrector
 
-def load_full_adult_dataset():
+def load_full_adult_dataset(sample_size=None):
     """Load and prepare full Adult dataset"""
     print(f"\n{'='*70}")
     print("LOADING FULL ADULT DATASET")
@@ -28,6 +28,11 @@ def load_full_adult_dataset():
                      na_values='?')
     
     print(f"✓ Loaded {len(df):,} rows, {len(df.columns)} columns")
+    
+    if sample_size and sample_size < len(df):
+        df = df.sample(n=sample_size, random_state=42).reset_index(drop=True)
+        print(f"✓ Sampled {sample_size:,} rows for testing (reduces O(n²) complexity)")
+    
     print(f"✓ Dataset shape: {df.shape}")
     
     return df
@@ -152,11 +157,11 @@ def test_combined_cleaning(df, threshold=0.8):
 def main():
     """Run full dataset duplicate detection tests"""
     print(f"\n{'='*70}")
-    print("DUPLICATE DETECTION TEST - FULL ADULT DATASET")
+    print("DUPLICATE DETECTION TEST - ADULT DATASET (5K SAMPLE)")
     print(f"{'='*70}")
     
-    #load full dataset
-    df = load_full_adult_dataset()
+    #load dataset with 5k sample for manageable O(n²) complexity
+    df = load_full_adult_dataset(sample_size=5000)
     
     #test 1: exact duplicates
     detector, duplicates = test_exact_duplicates(df)
@@ -169,6 +174,10 @@ def main():
     
     print(f"\n{'='*70}")
     print("ALL TESTS COMPLETED")
+    print(f"{'='*70}\n")
+    print("💡 Note: Tested on 5,000 row sample to manage O(n²) complexity.")
+    print("   Full 32k dataset would require ~530M comparisons (6-18 hours).")
+    print("   For production, consider implementing blocking/indexing strategies.")
     print(f"{'='*70}\n")
 
 if __name__ == "__main__":
