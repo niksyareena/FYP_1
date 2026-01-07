@@ -174,20 +174,108 @@ class DuplicateDetector:
         
         print(f"✓ Found {len(fuzzy_pairs)} fuzzy duplicate pairs")
         
+        if len(fuzzy_pairs) > 0:
+            print(f"\n⚠️  WARNING: Fuzzy duplicates detected on demographic data.")
+            print(f"   Without unique identifiers (email, ID, etc.), matches may include:")
+            print(f"   - True duplicates (same person with typos)")
+            print(f"   - False positives (different people with similar demographics)")
+            print(f"   RECOMMENDATION: Review pairs manually before removal.")
+        
+        return fuzzy_pairs
+    
+    def detect_fuzzy_duplicates_with_blocking(self, df: pd.DataFrame, blocking_key: str,
+                                             subset: Optional[List[str]] = None,
+                                             threshold: Optional[float] = None) -> List[Tuple[int, int, float]]:
+        """
+        Detect fuzzy duplicates using blocking strategy for improved performance
+        
+        Args:
+            df: Input dataframe
+            blocking_key: Column to use for blocking (e.g., 'job', 'workclass')
+            subset: List of columns to consider for duplicates (None = all columns)
+            threshold: Similarity threshold (overrides instance threshold if provided)
+            
+        Returns:
+            List of tuples (index1, index2, similarity_score) for detected fuzzy duplicates
+        """
+        self.original_count = len(df)
+        threshold = threshold if threshold is not None else self.fuzzy_threshold
+        cols_to_check = subset if subset else df.columns.tolist()
+        
+        print(f"Checking {len(df)} rows with blocking strategy (threshold={threshold})...")
+        print(f"  Blocking on: '{blocking_key}'")
+        print(f"  Using per-field threshold: ALL fields must be ≥{threshold}")
+        
+        #create blocks
+        blocks = df.groupby(blocking_key).groups
+        print(f"  Created {len(blocks)} blocks (avg {len(df)/len(blocks):.1f} rows per block)\n")
+        
+        fuzzy_pairs = []
+        total_comparisons = 0
+        blocks_processed = 0
+        
+        for block_value, indices in blocks.items():
+            blocks_processed += 1
+            if blocks_processed % 5 == 0:
+                print(f"  Processed {blocks_processed}/{len(blocks)} blocks... ({len(fuzzy_pairs)} pairs found so far)")
+            
+            if len(indices) > 1:
+                #compare only within this block
+                for i, idx1 in enumerate(indices):
+                    for idx2 in indices[i+1:]:
+                        total_comparisons += 1
+                        row1 = df.iloc[idx1][cols_to_check]
+                        row2 = df.iloc[idx2][cols_to_check]
+                        
+                        avg_similarity, all_pass, _ = self.calc_row_similarity_per_field(
+                            row1, row2, threshold
+                        )
+                        
+                        if all_pass and avg_similarity < 1.0:
+                            fuzzy_pairs.append((idx1, idx2, avg_similarity))
+        
+        exhaustive_comparisons = len(df) * (len(df) - 1) // 2
+        print(f"\n✓ Completed with blocking: {total_comparisons:,} comparisons")
+        print(f"  (vs {exhaustive_comparisons:,} without blocking - {(1 - total_comparisons/exhaustive_comparisons)*100:.1f}% reduction)")
+        print(f"✓ Found {len(fuzzy_pairs)} fuzzy duplicate pairs")
+        
+        if len(fuzzy_pairs) > 0:
+            print(f"\n⚠️  WARNING: Fuzzy duplicates detected on demographic data.")
+            print(f"   Without unique identifiers (email, ID, etc.), matches may include:")
+            print(f"   - True duplicates (same person with typos)")
+            print(f"   - False positives (different people with similar demographics)")
+            print(f"   RECOMMENDATION: Review pairs manually before removal.")
+        
+        self.fuzzy_duplicate_pairs = fuzzy_pairs
+        self.duplicates_found = len(fuzzy_pairs)
+        
+        #log detection
+        self.duplicates_log.append({
+            'operation': 'fuzzy_detection_blocking',
+            'method': 'per_field_threshold_with_blocking',
+            'blocking_key': blocking_key,
+            'columns_checked': subset if subset else 'all',
+            'total_rows': self.original_count,
+            'fuzzy_pairs_found': len(fuzzy_pairs),
+            'threshold': threshold,
+            'comparisons': total_comparisons
+        })
+        
         return fuzzy_pairs
     
     def remove_fuzzy_duplicates(self, df: pd.DataFrame, fuzzy_pairs: Optional[List[Tuple[int, int, float]]] = None,
-                               keep: str = 'first') -> pd.DataFrame:
+                               keep: str = 'first', interactive: bool = True) -> pd.DataFrame:
         """
-        Remove fuzzy duplicate rows from dataframe
+        Remove fuzzy duplicate rows from dataframe with optional user review
         
         Args:
             df: Input dataframe
             fuzzy_pairs: List of (index1, index2, similarity) tuples (uses detected pairs if None)
             keep: Which duplicate to keep ('first' or 'last')
+            interactive: If True, prompt user for review before removal
             
         Returns:
-            DataFrame with fuzzy duplicates removed
+            DataFrame with fuzzy duplicates removed (or unchanged if user cancels)
         """
         if fuzzy_pairs is None:
             fuzzy_pairs = self.fuzzy_duplicate_pairs
@@ -195,6 +283,58 @@ class DuplicateDetector:
         if not fuzzy_pairs:
             print("No fuzzy duplicates to remove")
             return df.copy()
+        
+        #interactive review prompt
+        if interactive:
+            print(f"\n{'='*70}")
+            print("⚠️  FUZZY DUPLICATE REMOVAL WARNING")
+            print(f"{'='*70}")
+            print(f"Found {len(fuzzy_pairs)} fuzzy duplicate pairs.")
+            print(f"Note: Fuzzy matching may produce false positives on demographic data.")
+            print(f"\nOptions:")
+            print(f"  1. Review duplicates first")
+            print(f"  2. Proceed with removal immediately")
+            print(f"  3. Skip removal")
+            
+            while True:
+                choice = input(f"\nEnter your choice (1/2/3): ").strip()
+                
+                if choice == '1':
+                    #display all pairs for review
+                    print(f"\n{'='*70}")
+                    print("REVIEWING FUZZY DUPLICATE PAIRS")
+                    print(f"{'='*70}\n")
+                    
+                    for i, (idx1, idx2, sim) in enumerate(sorted(fuzzy_pairs, key=lambda x: x[2], reverse=True), 1):
+                        print(f"Pair {i}/{len(fuzzy_pairs)} (similarity: {sim:.2%}):")
+                        print(f"  Row {idx1}: {df.iloc[idx1].to_dict()}")
+                        print(f"  Row {idx2}: {df.iloc[idx2].to_dict()}")
+                        print()
+                        
+                        if i % 10 == 0 and i < len(fuzzy_pairs):
+                            cont = input(f"Continue viewing? ({i}/{len(fuzzy_pairs)} shown) [y/n]: ").strip().lower()
+                            if cont != 'y':
+                                break
+                    
+                    #prompt again after review
+                    print(f"\nAfter review, do you want to proceed with removal?")
+                    proceed = input("Enter 'yes' to proceed or 'no' to skip: ").strip().lower()
+                    if proceed == 'yes':
+                        break
+                    else:
+                        print("❌ Removal cancelled by user")
+                        return df.copy()
+                
+                elif choice == '2':
+                    print("✓ Proceeding with removal...")
+                    break
+                
+                elif choice == '3':
+                    print("❌ Removal cancelled by user")
+                    return df.copy()
+                
+                else:
+                    print("Invalid choice. Please enter 1, 2, or 3.")
         
         #collect indices to drop
         indices_to_drop = set()
@@ -208,6 +348,8 @@ class DuplicateDetector:
         #remove duplicates
         df_cleaned = df.drop(index=list(indices_to_drop)).reset_index(drop=True)
         self.duplicates_removed = len(indices_to_drop)
+        
+        print(f"✓ Removed {self.duplicates_removed} fuzzy duplicate rows")
         
         #log removal
         self.duplicates_log.append({
