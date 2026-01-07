@@ -4,10 +4,14 @@ Test duplicate detection with injected duplicates in Adult dataset
 
 import pandas as pd
 import numpy as np
-from duplicate_detector import DuplicateDetector
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+from duplicates.duplicate_detector import DuplicateDetector
+from format_correction.format_corrector import FormatCorrector
 
 def load_adult_data():
-    """load Adult dataset"""
+    """Load Adult dataset and apply format correction"""
     column_names = [
         'age', 'workclass', 'fnlwgt', 'education', 'education-num',
         'marital-status', 'occupation', 'relationship', 'race', 'sex',
@@ -18,9 +22,15 @@ def load_adult_data():
                      names=column_names,
                      skipinitialspace=True)
     
-    return df
+    #apply format correction to get clean, normalized data
+    print("Applying format correction to original dataset...")
+    corrector = FormatCorrector()
+    df_corrected = corrector.normalize_strings(df, case='lower', normalize_punctuation=True)
+    print(f"✓ Format correction applied (normalized punctuation and case)")
+    
+    return df_corrected
 
-def create_test_dataset_with_injected_duplicates(df, n_base=100, n_exact=10, n_fuzzy=15):
+def create_test_dataset_with_injected_duplicates(df, n_base=500, n_exact=50, n_fuzzy=100):
     """
     Create a controlled test dataset with known duplicates
     
@@ -34,39 +44,20 @@ def create_test_dataset_with_injected_duplicates(df, n_base=100, n_exact=10, n_f
         Test dataframe, original indices mapping, and ground truth
     """
     print(f"\n{'='*70}")
-    print("STEP 0: PRE-CLEANING BASE SAMPLE")
+    print("STEP 0: PRE-CLEANING DATASET")
     print(f"{'='*70}\n")
     
-    #get clean base dataset (remove exact duplicates)
+    #remove exact duplicates
     df_clean = df.drop_duplicates().copy()
+    print(f"✓ Removed exact duplicates: {len(df)} → {len(df_clean)} rows")
     
-    #sample more rows than needed to account for fuzzy duplicate removal
-    oversample_factor = 3  #sample 3x to ensure we have enough after filtering
-    candidate_sample = df_clean.sample(n=n_base * oversample_factor, random_state=42).reset_index(drop=True)
-    print(f"✓ Sampled {len(candidate_sample)} candidate rows")
-    
-    #detect and remove fuzzy duplicates from candidate sample
-    print(f"✓ Detecting pre-existing fuzzy duplicates in base sample...")
-    detector = DuplicateDetector(fuzzy_threshold=0.75)
-    fuzzy_pairs_in_base = detector.detect_fuzzy_duplicates(candidate_sample, threshold=0.75)
-    
-    #build set of indices to remove (keep first occurrence)
-    indices_to_remove = set()
-    for idx1, idx2, sim in fuzzy_pairs_in_base:
-        indices_to_remove.add(max(idx1, idx2))  #remove later occurrence
-    
-    #filter to clean rows only
-    clean_indices = [i for i in range(len(candidate_sample)) if i not in indices_to_remove]
-    base_sample = candidate_sample.iloc[clean_indices[:n_base]].reset_index(drop=True)
-    
-    print(f"✓ Removed {len(indices_to_remove)} pre-existing fuzzy duplicates")
-    print(f"✓ Final clean base sample: {len(base_sample)} rows")
+    #sample base rows from clean dataset
+    base_sample = df_clean.sample(n=n_base, random_state=42).reset_index(drop=True)
+    print(f"✓ Sampled {n_base} clean base rows")
     
     print(f"\n{'='*70}")
     print("STEP 1: CREATING CONTROLLED TEST DATASET")
     print(f"{'='*70}")
-    
-    print(f"\n✓ Base sample is now guaranteed free of fuzzy duplicates")
     
     #track what we inject
     exact_duplicate_pairs = []
@@ -91,110 +82,107 @@ def create_test_dataset_with_injected_duplicates(df, n_base=100, n_exact=10, n_f
         print(f"    {duplicate_row.to_dict()}")
         print()
     
-    #create fuzzy duplicates with clear variations
+    #create fuzzy duplicates with variations
     print(f"\n{'='*70}")
     print("STEP 3: INJECTING FUZZY DUPLICATES")
     print(f"{'='*70}\n")
     
-    fuzzy_rows = []
+    #pure typos only - no format issues (those are handled by format correction module)
+    #4 fields with 2-3 typo variations each for better coverage
+    workclass_typos = {
+        'private': ['privete', 'prvate'],
+        'self emp not inc': ['self enp not inc', 'self emp npt inc'],
+        'federal gov': ['federai gov', 'fedreal gov'],
+        'state gov': ['stare gov', 'state giv'],
+        'local gov': ['locsl gov', 'local giv']
+    }
+    
+    education_typos = {
+        'hs grad': ['hs gard', 'hs grsd'],
+        'bachelors': ['bachelers', 'batchelors'],
+        'some college': ['some colege', 'sone college'],
+        'masters': ['mastres', 'masrers'],
+        'assoc voc': ['assoc vic', 'assic voc'],
+        'assoc acdm': ['assoc acdn', 'assic acdm']
+    }
+    
+    occupation_typos = {
+        'machine op inspct': ['machine op inspvt', 'machime op inspct'],
+        'exec managerial': ['exec manageral', 'exec manegerial'],
+        'prof specialty': ['prof speciality', 'prof specialy'],
+        'craft repair': ['craft repiar', 'carft repair'],
+        'adm clerical': ['adm clerical', 'adm clercal'],
+        'sales': ['seles', 'saels'],
+        'transport moving': ['transport movinr', 'transprot moving'],
+        'handlers cleaners': ['handlers clenaers', 'handlerz cleaners'],
+        'farming fishing': ['farming fishimg', 'farmimg fishing']
+    }
+    
+    marital_status_typos = {
+        'married civ spouse': ['married civ spause', 'married civ spouce'],
+        'never married': ['never maried', 'never marrird'],
+        'divorced': ['divorsed', 'divorved'],
+        'separated': ['seperated', 'separeted'],
+        'widowed': ['widowwd', 'widowd']
+    }
+    
+    modified_rows = []
     for i in range(n_fuzzy):
-        source_idx = n_exact + i  #use next n_fuzzy rows as sources
-        original_row = base_sample.iloc[source_idx].copy()
-        fuzzy_row = original_row.copy()
+        source_idx = n_exact + i
+        clean_record = base_sample.iloc[source_idx].copy()
+        messy_record = clean_record.copy()
         
-        #apply specific variations to make it fuzzy
-        variations_applied = []
+        changes_made = []
         
-        #variation 1: workclass (remove hyphens, change case, expand)
-        if 'Private' in str(fuzzy_row['workclass']):
-            fuzzy_row['workclass'] = 'private'
-            variations_applied.append("workclass: 'Private' → 'private'")
-        elif 'Self-emp-not-inc' in str(fuzzy_row['workclass']):
-            fuzzy_row['workclass'] = 'Self emp not inc'
-            variations_applied.append("workclass: 'Self-emp-not-inc' → 'Self emp not inc'")
-        elif 'Federal-gov' in str(fuzzy_row['workclass']):
-            fuzzy_row['workclass'] = 'federal gov'
-            variations_applied.append("workclass: 'Federal-gov' → 'federal gov'")
-        elif 'State-gov' in str(fuzzy_row['workclass']):
-            fuzzy_row['workclass'] = 'state government'
-            variations_applied.append("workclass: 'State-gov' → 'state government'")
-        elif 'Local-gov' in str(fuzzy_row['workclass']):
-            fuzzy_row['workclass'] = 'local gov'
-            variations_applied.append("workclass: 'Local-gov' → 'local gov'")
+        #apply workclass typos
+        wc_value = str(messy_record['workclass'])
+        if wc_value in workclass_typos:
+            messy_record['workclass'] = str(np.random.choice(workclass_typos[wc_value]))
+            changes_made.append(f"workclass: '{clean_record['workclass']}' → '{messy_record['workclass']}'")
         
-        #variation 2: education (abbreviations, case changes, spelling)
-        if 'HS-grad' in str(fuzzy_row['education']):
-            new_val = str(np.random.choice(['hs grad', 'high school grad', 'HS graduate']))
-            fuzzy_row['education'] = new_val
-            variations_applied.append(f"education: 'HS-grad' → '{new_val}'")
-        elif 'Bachelors' in str(fuzzy_row['education']):
-            new_val = str(np.random.choice(['Bachelor', 'Bachelors degree', 'bachelors']))
-            fuzzy_row['education'] = new_val
-            variations_applied.append(f"education: 'Bachelors' → '{new_val}'")
-        elif 'Some-college' in str(fuzzy_row['education']):
-            fuzzy_row['education'] = 'Some college'
-            variations_applied.append("education: 'Some-college' → 'Some college'")
-        elif 'Masters' in str(fuzzy_row['education']):
-            new_val = str(np.random.choice(['Master', 'Masters degree', 'masters']))
-            fuzzy_row['education'] = new_val
-            variations_applied.append(f"education: 'Masters' → '{new_val}'")
-        elif 'Assoc-voc' in str(fuzzy_row['education']):
-            fuzzy_row['education'] = 'Associate voc'
-            variations_applied.append("education: 'Assoc-voc' → 'Associate voc'")
+        #apply education typos
+        edu_value = str(messy_record['education'])
+        if edu_value in education_typos:
+            messy_record['education'] = str(np.random.choice(education_typos[edu_value]))
+            changes_made.append(f"education: '{clean_record['education']}' → '{messy_record['education']}'")
         
-        #variation 3: occupation (remove hyphens, case changes)
-        if 'Exec-managerial' in str(fuzzy_row['occupation']):
-            fuzzy_row['occupation'] = 'Executive managerial'
-            variations_applied.append("occupation: 'Exec-managerial' → 'Executive managerial'")
-        elif 'Tech-support' in str(fuzzy_row['occupation']):
-            fuzzy_row['occupation'] = 'technical support'
-            variations_applied.append("occupation: 'Tech-support' → 'technical support'")
-        elif 'Craft-repair' in str(fuzzy_row['occupation']):
-            fuzzy_row['occupation'] = 'craft repair'
-            variations_applied.append("occupation: 'Craft-repair' → 'craft repair'")
-        elif 'Machine-op-inspct' in str(fuzzy_row['occupation']):
-            fuzzy_row['occupation'] = 'Machine operator inspct'
-            variations_applied.append("occupation: 'Machine-op-inspct' → 'Machine operator inspct'")
-        elif 'Adm-clerical' in str(fuzzy_row['occupation']):
-            fuzzy_row['occupation'] = 'Administrative clerical'
-            variations_applied.append("occupation: 'Adm-clerical' → 'Administrative clerical'")
-        elif 'Prof-specialty' in str(fuzzy_row['occupation']):
-            fuzzy_row['occupation'] = 'Professional specialty'
-            variations_applied.append("occupation: 'Prof-specialty' → 'Professional specialty'")
+        #apply occupation typos
+        occ_value = str(messy_record['occupation'])
+        if occ_value in occupation_typos:
+            messy_record['occupation'] = str(np.random.choice(occupation_typos[occ_value]))
+            changes_made.append(f"occupation: '{clean_record['occupation']}' → '{messy_record['occupation']}'")
         
-        #variation 4: marital-status (remove hyphens, expand abbreviations)
-        if 'Never-married' in str(fuzzy_row['marital-status']):
-            fuzzy_row['marital-status'] = 'never married'
-            variations_applied.append("marital-status: 'Never-married' → 'never married'")
-        elif 'Married-civ-spouse' in str(fuzzy_row['marital-status']):
-            fuzzy_row['marital-status'] = 'Married civilian spouse'
-            variations_applied.append("marital-status: 'Married-civ-spouse' → 'Married civilian spouse'")
+        #apply marital-status typos
+        marital_value = str(messy_record['marital-status'])
+        if marital_value in marital_status_typos:
+            messy_record['marital-status'] = str(np.random.choice(marital_status_typos[marital_value]))
+            changes_made.append(f"marital-status: '{clean_record['marital-status']}' → '{messy_record['marital-status']}'")
         
-        fuzzy_rows.append(fuzzy_row)
+        modified_rows.append(messy_record)
         fuzzy_duplicate_pairs.append((source_idx, len(base_sample) + n_exact + i))
         
         print(f"Fuzzy Duplicate #{i+1}:")
         print(f"  Source Index: {source_idx}")
         print(f"  Will be inserted at index: {len(base_sample) + n_exact + i}")
-        print(f"  Original:")
-        print(f"    {original_row.to_dict()}")
-        print(f"  Modified:")
-        print(f"    {fuzzy_row.to_dict()}")
-        print(f"  Variations: {', '.join(variations_applied) if variations_applied else 'None (keeping same)'}")
+        if changes_made:
+            for change in changes_made:
+                print(f"    {change}")
+        else:
+            print(f"    no variations applied (keeping original values)")
         print()
     
     #combine all rows
     exact_df = pd.DataFrame(exact_rows)
-    fuzzy_df = pd.DataFrame(fuzzy_rows)
+    modified_df = pd.DataFrame(modified_rows)
     
-    df_test = pd.concat([base_sample, exact_df, fuzzy_df], ignore_index=True)
+    final_df = pd.concat([base_sample, exact_df, modified_df], ignore_index=True)
     
     #ground truth
     ground_truth = {
         'base_size': n_base,
         'exact_duplicates': n_exact,
         'fuzzy_duplicates': n_fuzzy,
-        'total_size': len(df_test),
+        'total_size': len(final_df),
         'exact_pairs': exact_duplicate_pairs,
         'fuzzy_pairs': fuzzy_duplicate_pairs
     }
@@ -213,47 +201,16 @@ def create_test_dataset_with_injected_duplicates(df, n_base=100, n_exact=10, n_f
     print(f"   Fuzzy duplicate pairs: {len(fuzzy_duplicate_pairs)}")
     print(f"{'='*70}\n")
     
-    return df_test, ground_truth
+    #save for inspection
+    print("Saving test dataset to 'data/output/test_duplicates_injected.csv'...")
+    final_df.to_csv('data/output/test_duplicates_injected.csv', index=False)
+    print("✓ Saved\n")
+    
+    return final_df, ground_truth
 
-def verify_injected_duplicates(df, ground_truth):
-    """verify that injected duplicates are actually in the dataset"""
-    print(f"\n{'='*70}")
-    print("STEP 4: VERIFICATION OF INJECTED DUPLICATES")
-    print(f"{'='*70}\n")
-    
-    print("Verifying Exact Duplicates (All 10):")
-    for i, (idx1, idx2) in enumerate(ground_truth['exact_pairs']):  
-        row1 = df.iloc[idx1]
-        row2 = df.iloc[idx2]
-        is_identical = row1.equals(row2)
-        print(f"  Pair {i+1}: Index {idx1} ↔ {idx2} - Identical: {is_identical}")
-        print(f"    Row {idx1}:")
-        print(f"      {row1.to_dict()}")
-        print(f"    Row {idx2}:")
-        print(f"      {row2.to_dict()}")
-        print()
-    
-    print(f"\nVerifying Fuzzy Duplicates (All 15):")
-    for i, (idx1, idx2) in enumerate(ground_truth['fuzzy_pairs']):  
-        row1 = df.iloc[idx1]
-        row2 = df.iloc[idx2]
-        
-        #show key fields
-        print(f"  Pair {i+1}: Index {idx1} ↔ {idx2}")
-        print(f"    Row {idx1}:")
-        print(f"      {row1.to_dict()}")
-        print(f"    Row {idx2}:")
-        print(f"      {row2.to_dict()}")
-        print()
-    
-    print(f"\n{'='*70}\n")
-    
-    return True
 
 def main():
-    """run controlled duplicate injection and show results"""
-    
-    #load data
+    """Run injection process"""
     print("Loading Adult dataset...")
     df = load_adult_data()
     print(f"✓ Loaded {len(df):,} rows\n")
@@ -261,19 +218,11 @@ def main():
     #create test dataset with injected duplicates
     df_test, ground_truth = create_test_dataset_with_injected_duplicates(
         df, 
-        n_base=100,      #use 100 base rows
-        n_exact=10,      #inject 10 exact duplicates
-        n_fuzzy=15       #inject 15 fuzzy duplicates
+        n_base=500,
+        n_exact=50,
+        n_fuzzy=100
     )
-    
-    #verify injections
-    verify_injected_duplicates(df_test, ground_truth)
-    
-    #save for inspection
-    print("Saving test dataset to 'data/output/test_duplicates_injected.csv'...")
-    df_test.to_csv('data/output/test_duplicates_injected.csv', index=False)
-    print("✓ Saved\n")
- 
 
 if __name__ == "__main__":
     main()
+

@@ -13,12 +13,17 @@ def load_test_data():
     return df
 
 def load_ground_truth():
-    """manually define ground truth based on injection logic"""
-    #exact duplicate pairs: rows 0-9 duplicated at positions 100-109
-    exact_pairs = [(i, 100 + i) for i in range(10)]
+    """Define ground truth duplicate pairs"""
+    # Updated for 500 base + 50 exact + 100 fuzzy
+    n_base = 500
+    n_exact = 50
+    n_fuzzy = 100
     
-    #fuzzy duplicate pairs: rows 10-24 duplicated with variations at positions 110-124
-    fuzzy_pairs = [(10 + i, 110 + i) for i in range(15)]
+    # Exact duplicates: rows 0-49 copied to positions 500-549
+    exact_pairs = [(i, n_base + i) for i in range(n_exact)]
+    
+    # Fuzzy duplicates: rows 50-149 with variations at positions 550-649
+    fuzzy_pairs = [(n_exact + i, n_base + n_exact + i) for i in range(n_fuzzy)]
     
     ground_truth = {
         'exact_pairs': exact_pairs,
@@ -92,9 +97,12 @@ def test_fuzzy_duplicate_detection(df, ground_truth, threshold=0.75):
     
     detector = DuplicateDetector(fuzzy_threshold=threshold)
     
-    #detect fuzzy duplicates
+    #detect fuzzy duplicates using exhaustive method
     print(f"Running fuzzy duplicate detection (threshold={threshold})...")
-    fuzzy_pairs = detector.detect_fuzzy_duplicates(df, threshold=threshold)
+    fuzzy_pairs = detector.detect_fuzzy_duplicates(
+        df,
+        threshold=threshold
+    )
     
     #convert to set of tuples for comparison
     detected_pairs = {(min(idx1, idx2), max(idx1, idx2)) for idx1, idx2, sim in fuzzy_pairs}

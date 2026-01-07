@@ -25,7 +25,7 @@ class DataProfiler:
                                  (e.g., [' ?', '?', 'NA', 'N/A', 'unknown'])
         """
         self.profile = {}
-        # Default missing value indicators
+        #default missing value indicators
         self.na_values = [' ?', '?', 'NA', 'N/A', 'na', 'n/a', 
                          'NULL', 'null', 'None', 'none', '', ' ', 
                          'unknown', 'Unknown', 'UNKNOWN', 'missing', 'Missing', '-']
@@ -43,10 +43,10 @@ class DataProfiler:
         Returns:
             Count of missing values
         """
-        # Count NaN values
+        #count NaN values
         nan_count = series.isnull().sum()
         
-        # Count other missing value representations (for object/string columns)
+        #count other missing value representations (for object/string columns)
         if series.dtype == 'object':
             for na_val in self.na_values:
                 nan_count += (series == na_val).sum()
@@ -79,7 +79,7 @@ class DataProfiler:
         non_null_counts = {}
         
         for col in df.columns:
-            missing_count = self._count_missing(df[col])
+            missing_count = self.count_missing(df[col])
             missing_counts[col] = missing_count
             missing_percentages[col] = (missing_count / len(df) * 100) if len(df) > 0 else 0
             non_null_counts[col] = len(df) - missing_count
@@ -117,7 +117,7 @@ class DataProfiler:
             #calculate skewness
             skew_val = df[col].skew()
             
-            # Use custom missing count
+            #use custom missing count
             non_null_count = len(df) - self.count_missing(df[col])
             
             numeric_profile[col] = {
@@ -129,7 +129,7 @@ class DataProfiler:
                 'max': float(df[col].max()) if not df[col].isna().all() else None,
                 'q25': float(df[col].quantile(0.25)) if not df[col].isna().all() else None,
                 'q75': float(df[col].quantile(0.75)) if not df[col].isna().all() else None,
-                'skewness': float(skew_val) if pd.notna(skew_val) else None  #distribution shape
+                'skewness': float(skew_val) if pd.notna(skew_val) else None  #type: ignore #distribution shape
             }
         
         #correlation matrix
@@ -151,10 +151,10 @@ class DataProfiler:
         categorical_profile = {}
         
         for col in categorical_cols:
-            # Use custom missing count
+            #use custom missing count
             non_null_count = len(df) - self.count_missing(df[col])
             
-            # Calculate cardinality excluding missing values
+            #calculate cardinality excluding missing values
             unique_count = df[col].nunique()
             for na_val in self.na_values:
                 if na_val in df[col].values:

@@ -65,46 +65,6 @@ class DuplicateDetector:
         
         return self.duplicate_rows
     
-    def calc_row_similarity(self, row1: pd.Series, row2: pd.Series) -> float:
-        """
-        Calculate similarity between two rows
-        
-        Args:
-            row1: First row
-            row2: Second row
-            
-        Returns:
-            Similarity score between 0.0 and 1.0
-        """
-        if len(row1) != len(row2):
-            return 0.0
-        
-        similarities = []
-        
-        for val1, val2 in zip(row1, row2):
-            #handle missing values
-            if pd.isna(val1) and pd.isna(val2):
-                similarities.append(1.0)
-                continue
-            elif pd.isna(val1) or pd.isna(val2):
-                similarities.append(0.0)
-                continue
-            
-            #convert to strings for comparison
-            str1 = str(val1).lower().strip()
-            str2 = str(val2).lower().strip()
-            
-            #exact match
-            if str1 == str2:
-                similarities.append(1.0)
-            else:
-                #fuzzy match using Levenshtein distance
-                similarity = Levenshtein.ratio(str1, str2)
-                similarities.append(similarity)
-        
-        #return average similarity across all columns
-        return sum(similarities) / len(similarities) if similarities else 0.0
-    
     def calc_row_similarity_per_field(self, row1: pd.Series, row2: pd.Series, 
                                        per_field_threshold: float = 0.85) -> Tuple[float, bool, List[Tuple[str, float]]]:
         """
@@ -135,7 +95,7 @@ class DuplicateDetector:
             elif pd.isna(val1) or pd.isna(val2):
                 field_similarities.append((col_name, 0.0))
                 all_pass = False
-                continue
+                break  #early stop: field failed, no point checking rest
             
             #convert to strings for comparison
             str1 = str(val1).lower().strip()
@@ -150,18 +110,18 @@ class DuplicateDetector:
             
             field_similarities.append((col_name, similarity))
             
-            #check if this field passes the threshold
+            #early stopping: if this field fails threshold, skip remaining fields
             if similarity < per_field_threshold:
                 all_pass = False
+                break  #no need to check remaining fields
         
-        #calculate average similarity
+        #calculate average similarity (only for fields checked)
         avg_similarity = sum(sim for _, sim in field_similarities) / len(field_similarities) if field_similarities else 0.0
         
         return avg_similarity, all_pass, field_similarities
     
     def detect_fuzzy_duplicates(self, df: pd.DataFrame, subset: Optional[List[str]] = None,
-                               threshold: Optional[float] = None,
-                               use_per_field_threshold: bool = True) -> List[Tuple[int, int, float]]:
+                               threshold: Optional[float] = None) -> List[Tuple[int, int, float]]:
         """
         Detect fuzzy duplicate rows in the dataframe
         
@@ -169,8 +129,6 @@ class DuplicateDetector:
             df: Input dataframe
             subset: List of columns to consider for duplicates (None = all columns)
             threshold: Similarity threshold (overrides instance threshold if provided)
-            use_per_field_threshold: If True, ALL fields must individually meet threshold
-                                    If False, uses average similarity (old behavior)
             
         Returns:
             List of tuples (index1, index2, similarity_score) for detected fuzzy duplicates
@@ -183,10 +141,7 @@ class DuplicateDetector:
         
         #compare each pair of rows
         print(f"Checking {len(df)} rows for fuzzy duplicates (threshold={threshold})...")
-        if use_per_field_threshold:
-            print(f"  Using per-field threshold: ALL fields must be ≥{threshold}")
-        else:
-            print(f"  Using average similarity threshold")
+        print(f"  Using per-field threshold: ALL fields must be ≥{threshold}")
         
         for i in range(len(df)):
             if i % 100 == 0 and i > 0:
@@ -196,20 +151,13 @@ class DuplicateDetector:
                 row1 = df.iloc[i][cols_to_check]
                 row2 = df.iloc[j][cols_to_check]
                 
-                if use_per_field_threshold:
-                    avg_similarity, all_pass, field_details = self.calc_row_similarity_per_field(
-                        row1, row2, threshold
-                    )
-                    
-                    #only consider it a duplicate if ALL fields pass threshold
-                    if all_pass and avg_similarity < 1.0:  #exclude exact matches
-                        fuzzy_pairs.append((i, j, avg_similarity))
-                else:
-                    #old behavior: use average similarity
-                    similarity = self.calc_row_similarity(row1, row2)
-                    
-                    if similarity >= threshold and similarity < 1.0:
-                        fuzzy_pairs.append((i, j, similarity))
+                avg_similarity, all_pass, field_details = self.calc_row_similarity_per_field(
+                    row1, row2, threshold
+                )
+                
+                #only consider it a duplicate if ALL fields pass threshold
+                if all_pass and avg_similarity < 1.0:  #exclude exact matches
+                    fuzzy_pairs.append((i, j, avg_similarity))
         
         self.fuzzy_duplicate_pairs = fuzzy_pairs
         self.duplicates_found = len(fuzzy_pairs)
@@ -217,7 +165,7 @@ class DuplicateDetector:
         #log detection
         self.duplicates_log.append({
             'operation': 'fuzzy_detection',
-            'method': 'per_field_threshold' if use_per_field_threshold else 'average_similarity',
+            'method': 'per_field_threshold',
             'columns_checked': subset if subset else 'all',
             'total_rows': self.original_count,
             'fuzzy_pairs_found': len(fuzzy_pairs),

@@ -61,12 +61,22 @@ class FormatCorrector:
         
         return df_corrected
     
-    def normalize_strings(self, df: pd.DataFrame, case: str = 'lower') -> pd.DataFrame:
+    def normalize_strings(self, df: pd.DataFrame, case: str = 'lower', 
+                         normalize_punctuation: bool = True) -> pd.DataFrame:
         """
         Normalize string columns:
         - Trim whitespace
         - Normalize casing
         - Remove extra internal spaces
+        - Optionally normalize punctuation/delimiters (dots, hyphens, underscores → spaces)
+        
+        Args:
+            df: Input dataframe
+            case: 'lower', 'upper', or 'title'
+            normalize_punctuation: If True, converts punctuation to spaces for consistency
+            
+        Returns:
+            Normalized dataframe
         """
         df_normalized = df.copy()
         string_cols = df.select_dtypes(include=['object']).columns
@@ -83,9 +93,15 @@ class FormatCorrector:
                 lambda x: x.strip() if isinstance(x, str) else x
             )
             
+            #normalize punctuation/delimiters to spaces (e.g., \"blue-collar\" → \"blue collar\")
+            if normalize_punctuation:
+                df_normalized[col] = df_normalized[col].apply(
+                    lambda x: x.replace('.', ' ').replace('-', ' ').replace('_', ' ') if isinstance(x, str) else x
+                )
+            
             #normalize internal whitespace (multiple spaces -> single space)
             df_normalized[col] = df_normalized[col].apply(
-                lambda x: re.sub(r'\s+', ' ', x) if isinstance(x, str) else x
+                lambda x: re.sub(r'\\s+', ' ', x).strip() if isinstance(x, str) else x
             )
             
             #apply casing
@@ -107,7 +123,7 @@ class FormatCorrector:
             if changes > 0:
                 self.corrections_log.append({
                     'column': col,
-                    'operation': f'string_normalization (case={case})',
+                    'operation': f'string_normalization (case={case}, punctuation={normalize_punctuation})',
                     'rows_affected': int(changes)
                 })
         
@@ -206,7 +222,7 @@ class FormatCorrector:
                 sample = df[col].dropna().head(100)
                 if len(sample) > 0:
                     try:
-                        parsed = pd.to_datetime(sample, errors='coerce')
+                        parsed = pd.to_datetime(sample, errors='coerce', format='mixed')
                         #if >50% of samples parse successfully, likely a date column
                         valid_dates = pd.notna(parsed).sum()
                         if valid_dates / len(sample) > 0.5:

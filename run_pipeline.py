@@ -29,18 +29,18 @@ def load_adult_dataset():
 
 
 def main():
-    # Set pandas display options
+    #set pandas display options
     pd.set_option('display.max_columns', None)
     pd.set_option('display.width', None)
     
-    # Load dataset
+    #load dataset
     print("Loading Adult dataset...")
     df = load_adult_dataset()
     
-    # Initialize pipeline
+    #initialize pipeline
     pipeline = DataCleaningPipeline(output_dir='data/output')
     
-    # Configure pipeline
+    #configure pipeline
     config = {
         'profiling': True,
         'format_correction': {
