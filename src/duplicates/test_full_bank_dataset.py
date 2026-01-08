@@ -43,7 +43,8 @@ def test_exact_duplicates(df):
     if len(duplicates) > 0:
         print(f"\n📋 Sample Duplicates (first 5):")
         for idx in duplicates.index[:5]:
-            print(f"   Row {idx}: {dict(df.loc[idx][['job', 'education', 'marital', 'contact']].head())}")
+            row_dict = {k: (int(v) if hasattr(v, 'item') else v) for k, v in df.loc[idx].head(4).items()}
+            print(f"   Row {idx}: {row_dict}")
     
     return detector, duplicates
 

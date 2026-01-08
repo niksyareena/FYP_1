@@ -6,6 +6,7 @@ Rule-based detection and removal of exact and fuzzy duplicate rows
 import pandas as pd
 from typing import Dict, List, Any, Optional, Tuple, Literal
 import json
+import re
 import Levenshtein
 
 
@@ -26,7 +27,7 @@ class DuplicateDetector:
         
         Args:
             fuzzy_threshold: Similarity threshold for fuzzy matching (0.0 to 1.0)
-                           Default 0.85 means rows must be 85% similar to be considered duplicates
+                           Default 0.85 means each field in a row pair must be 85% similar to be considered fuzzy duplicates
         """
         self.duplicates_log: List[Dict[str, Any]] = []
         self.duplicate_rows: Optional[pd.DataFrame] = None
@@ -35,6 +36,45 @@ class DuplicateDetector:
         self.duplicates_removed: int = 0
         self.fuzzy_threshold = fuzzy_threshold
         self.fuzzy_duplicate_pairs: List[Tuple[int, int, float]] = []  #(idx1, idx2, similarity)
+    
+    def is_typo_match(self, str1: str, str2: str, threshold: float) -> Tuple[float, bool]:
+        """
+        Check if two strings are similar due to typos (not genuine value differences).
+        
+        Examples:
+            - 'john' vs 'jonh' -> (0.88, True)   # Typo in name
+            - 'basic.9y' vs 'basik.9y' -> (0.89, True)   # Typo, same education
+            - 'basic.9y' vs 'basic.4y' -> (0.0, False)   # Different education levels
+        
+        Args:
+            str1: First string to compare
+            str2: Second string to compare  
+            threshold: Minimum similarity to consider a typo match
+            
+        Returns:
+            Tuple of (similarity_score, is_typo_match)
+            - similarity_score: 0.0 to 1.0 (0.0 if numbers differ)
+            - is_typo_match: True if similarity >= threshold AND numbers match
+        """
+        str1_clean = str(str1).lower().strip()
+        str2_clean = str(str2).lower().strip()
+        
+        #exact match
+        if str1_clean == str2_clean:
+            return 1.0, True
+        
+        #extract numeric parts from both strings
+        nums1 = re.findall(r'\d+', str1_clean)
+        nums2 = re.findall(r'\d+', str2_clean)
+        
+        #if either string contains numbers and they differ, not a typo
+        #typos affect text characters, not numbers
+        if (nums1 or nums2) and nums1 != nums2:
+            return 0.0, False
+        
+        #numbers match (or neither has numbers) - use levenshtein for typo detection
+        similarity = Levenshtein.ratio(str1_clean, str2_clean)
+        return similarity, similarity >= threshold
     
     def detect_duplicates(self, df: pd.DataFrame, subset: Optional[List[str]] = None):
         """
@@ -101,14 +141,16 @@ class DuplicateDetector:
             str1 = str(val1).lower().strip()
             str2 = str(val2).lower().strip()
             
-            #calculate similarity
-            if str1 == str2:
-                similarity = 1.0
-            else:
-                #fuzzy match using Levenshtein distance
-                similarity = Levenshtein.ratio(str1, str2)
+            #calculate similarity using typo-aware matching
+            #detects typos but rejects different numeric values
+            similarity, is_typo = self.is_typo_match(str1, str2, per_field_threshold)
             
             field_similarities.append((col_name, similarity))
+            
+            #if numbers differ, this field fails immediately (not a typo)
+            if not is_typo and similarity == 0.0:
+                all_pass = False
+                break
             
             #early stopping: if this field fails threshold, skip remaining fields
             if similarity < per_field_threshold:

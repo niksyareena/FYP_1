@@ -57,12 +57,13 @@ def test_exact_duplicates(df):
     if len(duplicates) > 0:
         print(f"\n📋 Sample Duplicates (first 5):")
         for idx in duplicates.index[:5]:
-            print(f"   Row {idx}: {dict(df.loc[idx][['age', 'workclass', 'education', 'occupation']].head())}")
+            row_dict = {k: (int(v) if hasattr(v, 'item') else v) for k, v in df.loc[idx].head(4).items()}
+            print(f"   Row {idx}: {row_dict}")
     
     return detector, duplicates
 
-def test_fuzzy_duplicates(df, threshold=0.8):
-    """Test fuzzy duplicate detection on full dataset"""
+def test_fuzzy_duplicates(df, threshold=0.85):
+    """Test fuzzy duplicate detection on full dataset with blocking"""
     print(f"\n{'='*70}")
     print(f"STEP 2: FUZZY DUPLICATE DETECTION (threshold={threshold})")
     print(f"{'='*70}\n")
@@ -75,18 +76,27 @@ def test_fuzzy_duplicates(df, threshold=0.8):
     
     detector = DuplicateDetector(fuzzy_threshold=threshold)
     
-    #focus on key string columns for fuzzy matching
-    key_columns = ['workclass', 'education', 'occupation', 'marital-status']
+    #automatically detect string columns for fuzzy matching
+    string_columns = df_corrected.select_dtypes(include=['object']).columns.tolist()
+    #exclude long text columns or IDs if present
+    key_columns = [col for col in string_columns if df_corrected[col].str.len().mean() < 50]
     
-    print(f"Detecting fuzzy duplicates on columns: {key_columns}")
-    print(f"Using per-field threshold: {threshold}")
-    print(f"Checking {len(df_corrected):,} rows (this may take a few minutes)...\n")
+    #use blocking strategy for performance
+    blocking_key = key_columns[0] if key_columns else None
     
-    fuzzy_pairs = detector.detect_fuzzy_duplicates(
-        df_corrected[key_columns + ['age', 'income']],  #include ID columns for context
-        subset=key_columns,
-        threshold=threshold
-    )
+    if blocking_key:
+        fuzzy_pairs = detector.detect_fuzzy_duplicates_with_blocking(
+            df_corrected,
+            blocking_key=blocking_key,
+            subset=key_columns,
+            threshold=threshold
+        )
+    else:
+        fuzzy_pairs = detector.detect_fuzzy_duplicates(
+            df_corrected,
+            subset=key_columns,
+            threshold=threshold
+        )
     
     print(f"\n📊 Results:")
     print(f"   Total rows checked: {len(df_corrected):,}")
@@ -94,20 +104,24 @@ def test_fuzzy_duplicates(df, threshold=0.8):
     print(f"   Affected rows: {len(set([idx for pair in fuzzy_pairs for idx in pair[:2]])):,}")
     
     if len(fuzzy_pairs) > 0:
-        print(f"\n📋 Top 10 Fuzzy Duplicate Pairs (by similarity):")
+        print(f"\n📋 Sample Fuzzy Duplicate Pairs (first 10 by similarity):")
         for idx1, idx2, sim in sorted(fuzzy_pairs, key=lambda x: x[2], reverse=True)[:10]:
             row1 = df_corrected.iloc[idx1][key_columns]
             row2 = df_corrected.iloc[idx2][key_columns]
             print(f"\n   Row {idx1} ↔ Row {idx2} (similarity: {sim:.2%})")
             print(f"     Row {idx1}: {dict(row1)}")
             print(f"     Row {idx2}: {dict(row2)}")
+        
+        print(f"\n⚠️  WARNING: Fuzzy duplicates detected on demographic data without unique identifiers.")
+        print(f"   These pairs may include false positives (similar but distinct individuals).")
+        print(f"   RECOMMENDATION: Review pairs manually before removal or use supervised approach.")
     
-    return detector, fuzzy_pairs
+    return detector, fuzzy_pairs, key_columns
 
-def test_combined_cleaning(df, threshold=0.8):
-    """Test combined exact + fuzzy duplicate removal"""
+def test_combined_cleaning(df, threshold=0.85):
+    """Test combined exact + fuzzy duplicate removal with user review"""
     print(f"\n{'='*70}")
-    print("STEP 3: COMBINED DUPLICATE REMOVAL")
+    print("STEP 3: COMBINED DUPLICATE REMOVAL WITH REVIEW")
     print(f"{'='*70}\n")
     
     initial_count = len(df)
@@ -122,19 +136,37 @@ def test_combined_cleaning(df, threshold=0.8):
     df_clean = detector.remove_duplicates(df_clean, keep='first')
     exact_removed = len(duplicates)
     
-    print(f"✓ Removed {exact_removed:,} exact duplicates")
+    print(f"✓ Removed {exact_removed:,} exact duplicates (auto-removed)")
     print(f"   Rows remaining: {len(df_clean):,}")
     
-    #detect and remove fuzzy duplicates
-    key_columns = ['workclass', 'education', 'occupation', 'marital-status']
-    fuzzy_pairs = detector.detect_fuzzy_duplicates(
-        df_clean[key_columns + ['age', 'income']],
-        subset=key_columns,
-        threshold=threshold
-    )
+    #auto-detect string columns
+    string_columns = df_clean.select_dtypes(include=['object']).columns.tolist()
+    key_columns = [col for col in string_columns if df_clean[col].str.len().mean() < 50]
+    blocking_key = key_columns[0] if key_columns else None
     
-    df_clean = detector.remove_fuzzy_duplicates(df_clean, fuzzy_pairs=fuzzy_pairs, keep='first')
-    fuzzy_removed = len(fuzzy_pairs)
+    print(f"\nDetecting fuzzy duplicates with blocking strategy...")
+    
+    if blocking_key:
+        fuzzy_pairs = detector.detect_fuzzy_duplicates_with_blocking(
+            df_clean,
+            blocking_key=blocking_key,
+            subset=key_columns,
+            threshold=threshold
+        )
+    else:
+        fuzzy_pairs = detector.detect_fuzzy_duplicates(
+            df_clean,
+            subset=key_columns,
+            threshold=threshold
+        )
+    
+    #prompt for review
+    if len(fuzzy_pairs) > 0:
+        #use interactive removal with user review
+        df_clean = detector.remove_fuzzy_duplicates(df_clean, fuzzy_pairs=fuzzy_pairs, keep='first', interactive=True)
+        fuzzy_removed = len(df_clean) - (initial_count - exact_removed)
+    else:
+        fuzzy_removed = 0
     
     print(f"✓ Removed {fuzzy_removed:,} fuzzy duplicates")
     print(f"   Rows remaining: {len(df_clean):,}")
@@ -142,10 +174,10 @@ def test_combined_cleaning(df, threshold=0.8):
     print(f"\n📊 Final Summary:")
     print(f"   Original rows: {initial_count:,}")
     print(f"   Exact duplicates removed: {exact_removed:,}")
-    print(f"   Fuzzy duplicates removed: {fuzzy_removed:,}")
-    print(f"   Total removed: {exact_removed + fuzzy_removed:,}")
+    print(f"   Fuzzy duplicates removed: {abs(fuzzy_removed):,}")
+    print(f"   Total removed: {exact_removed + abs(fuzzy_removed):,}")
     print(f"   Final clean rows: {len(df_clean):,}")
-    print(f"   Data reduction: {(exact_removed + fuzzy_removed)/initial_count*100:.2f}%")
+    print(f"   Data reduction: {(exact_removed + abs(fuzzy_removed))/initial_count*100:.2f}%")
     
     #save cleaned dataset
     output_path = 'data/output/adult_cleaned_full.csv'
@@ -157,27 +189,23 @@ def test_combined_cleaning(df, threshold=0.8):
 def main():
     """Run full dataset duplicate detection tests"""
     print(f"\n{'='*70}")
-    print("DUPLICATE DETECTION TEST - ADULT DATASET (5K SAMPLE)")
+    print("DUPLICATE DETECTION TEST - FULL ADULT DATASET")
     print(f"{'='*70}")
     
-    #load dataset with 5k sample for manageable O(n²) complexity
-    df = load_full_adult_dataset(sample_size=5000)
+    #load full dataset
+    df = load_full_adult_dataset()
     
     #test 1: exact duplicates
     detector, duplicates = test_exact_duplicates(df)
     
-    #test 2: fuzzy duplicates (with threshold=0.8)
-    fuzzy_detector, fuzzy_pairs = test_fuzzy_duplicates(df, threshold=0.8)
+    #test fuzzy duplicates (with threshold=0.85 and blocking)
+    fuzzy_detector, fuzzy_pairs, key_columns = test_fuzzy_duplicates(df, threshold=0.85)
     
     #test 3: combined cleaning
-    df_clean = test_combined_cleaning(df, threshold=0.8)
+    df_clean = test_combined_cleaning(df, threshold=0.85)
     
     print(f"\n{'='*70}")
     print("ALL TESTS COMPLETED")
-    print(f"{'='*70}\n")
-    print("💡 Note: Tested on 5,000 row sample to manage O(n²) complexity.")
-    print("   Full 32k dataset would require ~530M comparisons (6-18 hours).")
-    print("   For production, consider implementing blocking/indexing strategies.")
     print(f"{'='*70}\n")
 
 if __name__ == "__main__":

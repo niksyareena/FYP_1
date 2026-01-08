@@ -23,7 +23,7 @@ This research project develops an intelligent data cleaning system that combines
 
 **Methods**:
 - Baseline A: Rule-based cleaning
-- Baseline B: Rule + ML
+- Baseline B: ML-based cleaning
 - Proposed: Rule + ML + LLM explanations
 
 **Datasets**: 4-5 benchmark datasets (UCI/Kaggle + synthetic)
@@ -31,18 +31,14 @@ This research project develops an intelligent data cleaning system that combines
 ## Timeline
 
 ### FYP1 (Weeks 1-13)
-- Weeks 1-3: Literature review & setup
-- Weeks 4-5: Research design & dataset preparation
-- Weeks 6-8: Baseline implementation
-- Weeks 9-11: LLM integration
-- Weeks 12-13: Analysis & interim report
+-Data profiling module
+-Format correction module
+-Duplicate Detection module
 
 ### FYP2 (Weeks 14-26)
-- Weeks 14-15: Refinement & expansion
-- Weeks 16-18: Comprehensive experiments
-- Weeks 19-20: Statistical analysis
-- Weeks 21-23: Thesis writing
-- Weeks 24-26: Finalization & defense
+-Missing value imputation module
+-Outlier detection module
+-LLM explanation module
 
 ## Setup
 
