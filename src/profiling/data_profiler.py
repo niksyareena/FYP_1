@@ -81,12 +81,12 @@ class DataProfiler:
         for col in df.columns:
             missing_count = self.count_missing(df[col])
             missing_counts[col] = missing_count
-            missing_percentages[col] = (missing_count / len(df) * 100) if len(df) > 0 else 0
+            missing_percentages[col] = round((missing_count / len(df) * 100), 2) if len(df) > 0 else 0
             non_null_counts[col] = len(df) - missing_count
         
         #duplicates (rows only, not columns)
         n_duplicates = df.duplicated().sum()
-        duplicate_percentage = (n_duplicates / len(df) * 100) if len(df) > 0 else 0
+        duplicate_percentage = round((n_duplicates / len(df) * 100), 2) if len(df) > 0 else 0
         
         #memory
         memory_usage = df.memory_usage(deep=True).sum() / (1024 ** 2)  #MB
@@ -97,9 +97,9 @@ class DataProfiler:
             'dtypes': dtypes,
             'non_null_counts': {k: int(v) for k, v in non_null_counts.items()},
             'missing_counts': {k: int(v) for k, v in missing_counts.items()},
-            'missing_percentages': {k: float(v) for k, v in missing_percentages.items()},
+            'missing_percentages': {k: round(float(v), 2) for k, v in missing_percentages.items()},
             'n_duplicates': int(n_duplicates),
-            'duplicate_percentage': float(duplicate_percentage),
+            'duplicate_percentage': round(float(duplicate_percentage), 2),
             'memory_mb': round(float(memory_usage), 2)
         }
     
@@ -120,20 +120,42 @@ class DataProfiler:
             #use custom missing count
             non_null_count = len(df) - self.count_missing(df[col])
             
+            #check if column is integer type
+            is_integer_type = pd.api.types.is_integer_dtype(df[col])
+            
+            #for min/max/quartiles/median: preserve original precision
+            #for mean/std/skewness: always use 4 decimals
+            if not df[col].isna().all():
+                min_val = float(df[col].min())
+                max_val = float(df[col].max())
+                q25_val = float(df[col].quantile(0.25))
+                q75_val = float(df[col].quantile(0.75))
+                median_val = float(df[col].median())
+                
+                #if integer type, convert back to int if they're whole numbers
+                if is_integer_type:
+                    min_val = int(min_val) if min_val == int(min_val) else min_val
+                    max_val = int(max_val) if max_val == int(max_val) else max_val
+                    q25_val = int(q25_val) if q25_val == int(q25_val) else q25_val
+                    q75_val = int(q75_val) if q75_val == int(q75_val) else q75_val
+                    median_val = int(median_val) if median_val == int(median_val) else median_val
+            else:
+                min_val = max_val = q25_val = q75_val = median_val = None
+            
             numeric_profile[col] = {
                 'count': int(non_null_count),  #non-null count
-                'mean': float(df[col].mean()) if not df[col].isna().all() else None,
-                'median': float(df[col].median()) if not df[col].isna().all() else None,
-                'std': float(df[col].std()) if not df[col].isna().all() else None,
-                'min': float(df[col].min()) if not df[col].isna().all() else None,
-                'max': float(df[col].max()) if not df[col].isna().all() else None,
-                'q25': float(df[col].quantile(0.25)) if not df[col].isna().all() else None,
-                'q75': float(df[col].quantile(0.75)) if not df[col].isna().all() else None,
-                'skewness': float(skew_val) if pd.notna(skew_val) else None  #type: ignore #distribution shape
+                'mean': round(float(df[col].mean()), 4) if not df[col].isna().all() else None,
+                'median': median_val,
+                'std': round(float(df[col].std()), 4) if not df[col].isna().all() else None,
+                'min': min_val,
+                'max': max_val,
+                'q25': q25_val,
+                'q75': q75_val,
+                'skewness': round(float(skew_val), 4) if pd.notna(skew_val) else None  #type: ignore #distribution shape
             }
         
         #correlation matrix
-        correlation_matrix = df[numeric_cols].corr()
+        correlation_matrix = df[numeric_cols].corr().round(4)
         
         return {
             'columns': numeric_profile,
@@ -187,14 +209,15 @@ class DataProfiler:
         print(f"\n📊 DATASET OVERVIEW")
         print(f"   {'Rows:':<20} {dataset['n_rows']:>10,}")
         print(f"   {'Columns:':<20} {dataset['n_columns']:>10}")
-        print(f"   {'Memory Usage:':<20} {dataset['memory_mb']:>10} MB")
-        print(f"   {'Duplicate Rows:':<20} {dataset['n_duplicates']:>10} ({dataset['duplicate_percentage']:.2f}%)")
+        print(f"   {'Duplicate Rows:':<20} {dataset['n_duplicates']:>10} ({dataset['duplicate_percentage']:.2f}%)")       
         
         #missing values summary
         total_missing = sum(dataset['missing_counts'].values())
         missing_cols = len([v for v in dataset['missing_percentages'].values() if v > 0])
         print(f"   {'Missing Values:':<20} {total_missing:>10} ({missing_cols} columns affected)")
         
+        print(f"   {'Memory Usage:':<20} {dataset['memory_mb']:>10} MB") 
+
         #data types
         print(f"\n📋 COLUMN DATA TYPES")
         print(f"   {'Column':<20} {'Type':<15} {'Non-Null Count':<15}")
@@ -217,11 +240,30 @@ class DataProfiler:
         #numeric columns
         if self.profile['numeric_columns']['columns']:
             print(f"\n🔢 NUMERIC COLUMNS ({len(self.profile['numeric_columns']['columns'])} total)")
-            print(f"   {'Column':<20} {'Mean':<12} {'Std':<12} {'Min':<12} {'Max':<12}")
-            print(f"   {'-'*20} {'-'*12} {'-'*12} {'-'*12} {'-'*12}")
+            print(f"   {'Column':<20} {'Mean':<12} {'Median':<12} {'Std':<12} {'Min':<12} {'Q25':<12} {'Q75':<12} {'Max':<12} {'Skewness':<12}")
+            print(f"   {'-'*20} {'-'*12} {'-'*12} {'-'*12} {'-'*12} {'-'*12} {'-'*12} {'-'*12} {'-'*12}")
             for col, stats in self.profile['numeric_columns']['columns'].items():
                 if stats['mean'] is not None:
-                    print(f"   {col:<20} {stats['mean']:<12.2f} {stats['std']:<12.2f} {stats['min']:<12.2f} {stats['max']:<12.2f}")
+                    #format helper: if value is int, show as int; else show with appropriate decimals
+                    def format_val(val, calculated=False):
+                        if val is None:
+                            return "N/A"
+                        if isinstance(val, int):
+                            return str(val)
+                        if calculated:  #mean, std, skewness always show 4 decimals
+                            return f"{val:.4f}"
+                        return str(val)  #min/max/quartiles show as-is
+                    
+                    mean_str = format_val(stats['mean'], calculated=True)
+                    median_str = format_val(stats['median'])
+                    std_str = format_val(stats['std'], calculated=True)
+                    min_str = format_val(stats['min'])
+                    q25_str = format_val(stats['q25'])
+                    q75_str = format_val(stats['q75'])
+                    max_str = format_val(stats['max'])
+                    skew_str = format_val(stats['skewness'], calculated=True)
+                    
+                    print(f"   {col:<20} {mean_str:<12} {median_str:<12} {std_str:<12} {min_str:<12} {q25_str:<12} {q75_str:<12} {max_str:<12} {skew_str:<12}")
             
             #correlation matrix
             if 'correlation_matrix' in self.profile['numeric_columns']:
@@ -255,7 +297,7 @@ class DataProfiler:
         if 'correlation_matrix' in profile_copy.get('numeric_columns', {}):
             corr_matrix = profile_copy['numeric_columns']['correlation_matrix']
             if hasattr(corr_matrix, 'to_dict'):
-                profile_copy['numeric_columns']['correlation_matrix'] = corr_matrix.to_dict()
+                profile_copy['numeric_columns']['correlation_matrix'] = corr_matrix.round(4).to_dict()
         
         with open(filepath, 'w') as f:
             json.dump(profile_copy, f, indent=2, default=str)

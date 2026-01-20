@@ -4,7 +4,12 @@ Dataset: 286 instances, 10 attributes (9 features + 1 class)
 Missing values: '?' in node-caps (8) and breast-quad (1)
 """
 
+
 import pandas as pd
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+
 from src.profiling.data_profiler import DataProfiler
 
 #set pandas display options for better visibility
@@ -14,37 +19,7 @@ pd.set_option('display.max_colwidth', None)
 
 
 def load_breast_cancer_dataset():
-    """
-    Load UCI Breast Cancer dataset
-    
-    Format: CSV with no header
-    Columns: class, age, menopause, tumor-size, inv-nodes, node-caps, 
-             deg-malig, breast, breast-quad, irradiat
-    Missing values: '?'
-    """
-    
-    #define column names based on breast-cancer.names
-    column_names = [
-        'class',           #no-recurrence-events, recurrence-events
-        'age',             #10-19, 20-29, ..., 90-99
-        'menopause',       #lt40, ge40, premeno
-        'tumor-size',      #0-4, 5-9, ..., 55-59
-        'inv-nodes',       #0-2, 3-5, ..., 36-39
-        'node-caps',       #yes, no (8 missing)
-        'deg-malig',       #1, 2, 3
-        'breast',          #left, right
-        'breast-quad',     #left-up, left-low, right-up, right-low, central (1 missing)
-        'irradiat'         #yes, no
-    ]
-    
-    #load data
-    df = pd.read_csv(
-        'datasets/breast+cancer/breast-cancer.data',
-        names=column_names,
-        header=None,
-        na_values='?',  #uci format uses '?' for missing values
-        skipinitialspace=True
-    )
+    df = pd.read_csv("datasets/breast+cancer/breast-cancer.csv")
     
     return df
 

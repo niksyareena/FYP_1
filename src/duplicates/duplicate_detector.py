@@ -21,18 +21,16 @@ class DuplicateDetector:
     - Log all duplicate removals
     """
     
-    def __init__(self, fuzzy_threshold: float = 0.85):
+    def __init__(self, fuzzy_threshold: float = 0.80):
         """
         Initialize duplicate detector
         
         Args:
             fuzzy_threshold: Similarity threshold for fuzzy matching (0.0 to 1.0)
-                           Default 0.85 means each field in a row pair must be 85% similar to be considered fuzzy duplicates
+                           Default 0.80 means each field in a row pair must be 80% similar to be considered fuzzy duplicates
         """
         self.duplicates_log: List[Dict[str, Any]] = []
-        self.duplicate_rows: Optional[pd.DataFrame] = None
         self.original_count: int = 0
-        self.duplicates_found: int = 0
         self.duplicates_removed: int = 0
         self.fuzzy_threshold = fuzzy_threshold
         self.fuzzy_duplicate_pairs: List[Tuple[int, int, float]] = []  #(idx1, idx2, similarity)
@@ -85,25 +83,23 @@ class DuplicateDetector:
             subset: List of columns to consider for duplicates (None = all columns)
             
         Returns:
-            DataFrame containing only the duplicate rows
+            DataFrame containing only the duplicate rows (excluding first occurrence)
         """
-        self.original_count = len(df)
-        
         #find duplicates (marks all duplicates except first occurrence)
         duplicate_mask = df.duplicated(subset=subset, keep='first')
-        self.duplicate_rows = df[duplicate_mask].copy()  #type: ignore
-        self.duplicates_found = len(self.duplicate_rows) if self.duplicate_rows is not None else 0
+        duplicate_rows = df[duplicate_mask].copy()  #type: ignore
+        duplicates_found = len(duplicate_rows)
         
         #log detection
         self.duplicates_log.append({
-            'operation': 'detection',
+            'operation': 'exact_detection',
             'columns_checked': subset if subset else 'all',
-            'total_rows': self.original_count,
-            'duplicates_found': self.duplicates_found,
-            'duplicate_percentage': round(self.duplicates_found / self.original_count * 100, 2) if self.original_count > 0 else 0
+            'total_rows': len(df),
+            'duplicates_found': duplicates_found,
+            'duplicate_percentage': round(duplicates_found / len(df) * 100, 2) if len(df) > 0 else 0
         })
         
-        return self.duplicate_rows
+        return duplicate_rows
     
     def calc_row_similarity_per_field(self, row1: pd.Series, row2: pd.Series, 
                                        per_field_threshold: float = 0.85) -> Tuple[float, bool, List[Tuple[str, float]]]:
@@ -175,19 +171,19 @@ class DuplicateDetector:
         Returns:
             List of tuples (index1, index2, similarity_score) for detected fuzzy duplicates
         """
-        self.original_count = len(df)
         threshold = threshold if threshold is not None else self.fuzzy_threshold
         
         fuzzy_pairs = []
         cols_to_check = subset if subset else df.columns.tolist()
         
         #compare each pair of rows
-        print(f"Checking {len(df)} rows for fuzzy duplicates (threshold={threshold})...")
-        print(f"  Using per-field threshold: ALL fields must be ≥{threshold}")
+        print(f"Starting fuzzy duplicate detection on {len(df)} rows...")
+        print(f"Total comparisons needed: {len(df) * (len(df) - 1) // 2:,}")
         
         for i in range(len(df)):
-            if i % 100 == 0 and i > 0:
-                print(f"  Processed {i}/{len(df)} rows...")
+            if i % 50 == 0 and i > 0:
+                progress_pct = (i / len(df)) * 100
+                print(f"  Progress: {i}/{len(df)} rows processed ({progress_pct:.1f}%) - {len(fuzzy_pairs)} pairs found so far")
             
             for j in range(i + 1, len(df)):
                 row1 = df.iloc[i][cols_to_check]
@@ -201,109 +197,78 @@ class DuplicateDetector:
                 if all_pass and avg_similarity < 1.0:  #exclude exact matches
                     fuzzy_pairs.append((i, j, avg_similarity))
         
+        print(f"✓ Completed: {len(df)}/{len(df)} rows processed - {len(fuzzy_pairs)} fuzzy pairs found")
+        
         self.fuzzy_duplicate_pairs = fuzzy_pairs
-        self.duplicates_found = len(fuzzy_pairs)
         
         #log detection
         self.duplicates_log.append({
             'operation': 'fuzzy_detection',
             'method': 'per_field_threshold',
             'columns_checked': subset if subset else 'all',
-            'total_rows': self.original_count,
+            'total_rows': len(df),
             'fuzzy_pairs_found': len(fuzzy_pairs),
             'threshold': threshold
         })
         
-        print(f"✓ Found {len(fuzzy_pairs)} fuzzy duplicate pairs")
-        
-        if len(fuzzy_pairs) > 0:
-            print(f"\n⚠️  WARNING: Fuzzy duplicates detected on demographic data.")
-            print(f"   Without unique identifiers (email, ID, etc.), matches may include:")
-            print(f"   - True duplicates (same person with typos)")
-            print(f"   - False positives (different people with similar demographics)")
-            print(f"   RECOMMENDATION: Review pairs manually before removal.")
-        
         return fuzzy_pairs
     
-    def detect_fuzzy_duplicates_with_blocking(self, df: pd.DataFrame, blocking_key: str,
-                                             subset: Optional[List[str]] = None,
-                                             threshold: Optional[float] = None) -> List[Tuple[int, int, float]]:
-        """
-        Detect fuzzy duplicates using blocking strategy for improved performance
+    # def detect_fuzzy_duplicates_with_blocking(self, df: pd.DataFrame, blocking_key: str,
+    #                                          subset: Optional[List[str]] = None,
+    #                                          threshold: Optional[float] = None) -> List[Tuple[int, int, float]]:
+    #     """
+    #     Detect fuzzy duplicates using blocking strategy for improved performance
         
-        Args:
-            df: Input dataframe
-            blocking_key: Column to use for blocking (e.g., 'job', 'workclass')
-            subset: List of columns to consider for duplicates (None = all columns)
-            threshold: Similarity threshold (overrides instance threshold if provided)
+    #     Args:
+    #         df: Input dataframe
+    #         blocking_key: Column to use for blocking (e.g., 'job', 'workclass')
+    #         subset: List of columns to consider for duplicates (None = all columns)
+    #         threshold: Similarity threshold (overrides instance threshold if provided)
             
-        Returns:
-            List of tuples (index1, index2, similarity_score) for detected fuzzy duplicates
-        """
-        self.original_count = len(df)
-        threshold = threshold if threshold is not None else self.fuzzy_threshold
-        cols_to_check = subset if subset else df.columns.tolist()
+    #     Returns:
+    #         List of tuples (index1, index2, similarity_score) for detected fuzzy duplicates
+    #     """
+    #     threshold = threshold if threshold is not None else self.fuzzy_threshold
+    #     cols_to_check = subset if subset else df.columns.tolist()
         
-        print(f"Checking {len(df)} rows with blocking strategy (threshold={threshold})...")
-        print(f"  Blocking on: '{blocking_key}'")
-        print(f"  Using per-field threshold: ALL fields must be ≥{threshold}")
+    #     #create blocks
+    #     blocks = df.groupby(blocking_key).groups
         
-        #create blocks
-        blocks = df.groupby(blocking_key).groups
-        print(f"  Created {len(blocks)} blocks (avg {len(df)/len(blocks):.1f} rows per block)\n")
+    #     fuzzy_pairs = []
+    #     total_comparisons = 0
         
-        fuzzy_pairs = []
-        total_comparisons = 0
-        blocks_processed = 0
-        
-        for block_value, indices in blocks.items():
-            blocks_processed += 1
-            if blocks_processed % 5 == 0:
-                print(f"  Processed {blocks_processed}/{len(blocks)} blocks... ({len(fuzzy_pairs)} pairs found so far)")
+    #     for block_value, indices in blocks.items():
             
-            if len(indices) > 1:
-                #compare only within this block
-                for i, idx1 in enumerate(indices):
-                    for idx2 in indices[i+1:]:
-                        total_comparisons += 1
-                        row1 = df.iloc[idx1][cols_to_check]
-                        row2 = df.iloc[idx2][cols_to_check]
+    #         if len(indices) > 1:
+    #             #compare only within this block
+    #             for i, idx1 in enumerate(indices):
+    #                 for idx2 in indices[i+1:]:
+    #                     total_comparisons += 1
+    #                     row1 = df.iloc[idx1][cols_to_check]
+    #                     row2 = df.iloc[idx2][cols_to_check]
                         
-                        avg_similarity, all_pass, _ = self.calc_row_similarity_per_field(
-                            row1, row2, threshold
-                        )
+    #                     avg_similarity, all_pass, _ = self.calc_row_similarity_per_field(
+    #                         row1, row2, threshold
+    #                     )
                         
-                        if all_pass and avg_similarity < 1.0:
-                            fuzzy_pairs.append((idx1, idx2, avg_similarity))
+    #                     if all_pass and avg_similarity < 1.0:
+    #                         fuzzy_pairs.append((idx1, idx2, avg_similarity))
         
-        exhaustive_comparisons = len(df) * (len(df) - 1) // 2
-        print(f"\n✓ Completed with blocking: {total_comparisons:,} comparisons")
-        print(f"  (vs {exhaustive_comparisons:,} without blocking - {(1 - total_comparisons/exhaustive_comparisons)*100:.1f}% reduction)")
-        print(f"✓ Found {len(fuzzy_pairs)} fuzzy duplicate pairs")
+    #     self.fuzzy_duplicate_pairs = fuzzy_pairs
         
-        if len(fuzzy_pairs) > 0:
-            print(f"\n⚠️  WARNING: Fuzzy duplicates detected on demographic data.")
-            print(f"   Without unique identifiers (email, ID, etc.), matches may include:")
-            print(f"   - True duplicates (same person with typos)")
-            print(f"   - False positives (different people with similar demographics)")
-            print(f"   RECOMMENDATION: Review pairs manually before removal.")
+    #     #log detection
+    #     self.duplicates_log.append({
+    #         'operation': 'fuzzy_detection_blocking',
+    #         'method': 'per_field_threshold_with_blocking',
+    #         'blocking_key': blocking_key,
+    #         'columns_checked': subset if subset else 'all',
+    #         'total_rows': len(df),
+    #         'fuzzy_pairs_found': len(fuzzy_pairs),
+    #         'threshold': threshold,
+    #         'comparisons': total_comparisons
+    #     })
         
-        self.fuzzy_duplicate_pairs = fuzzy_pairs
-        self.duplicates_found = len(fuzzy_pairs)
-        
-        #log detection
-        self.duplicates_log.append({
-            'operation': 'fuzzy_detection_blocking',
-            'method': 'per_field_threshold_with_blocking',
-            'blocking_key': blocking_key,
-            'columns_checked': subset if subset else 'all',
-            'total_rows': self.original_count,
-            'fuzzy_pairs_found': len(fuzzy_pairs),
-            'threshold': threshold,
-            'comparisons': total_comparisons
-        })
-        
-        return fuzzy_pairs
+    #     return fuzzy_pairs
     
     def remove_fuzzy_duplicates(self, df: pd.DataFrame, fuzzy_pairs: Optional[List[Tuple[int, int, float]]] = None,
                                keep: str = 'first', interactive: bool = True) -> pd.DataFrame:
@@ -420,13 +385,6 @@ class DuplicateDetector:
         """
         self.original_count = len(df)
         
-        #detect duplicates first
-        duplicate_mask = df.duplicated(subset=subset, keep=keep)
-        self.duplicates_found = duplicate_mask.sum()
-        
-        #store duplicate rows before removal
-        self.duplicate_rows = df[duplicate_mask].copy()  #type: ignore
-        
         #remove duplicates
         df_cleaned = df.drop_duplicates(subset=subset, keep=keep).reset_index(drop=True)
         self.duplicates_removed = self.original_count - len(df_cleaned)
@@ -481,16 +439,9 @@ class DuplicateDetector:
             filepath: Path to save JSON log
         """
         log_data = {
-            'original_row_count': self.original_count,
-            'duplicates_found': self.duplicates_found,
             'duplicates_removed': self.duplicates_removed,
             'operations': self.duplicates_log
         }
-        
-        #add sample of duplicate rows if any were found
-        if self.duplicate_rows is not None and len(self.duplicate_rows) > 0:
-            sample_df = self.duplicate_rows.head(10)  #type: ignore
-            log_data['sample_duplicates'] = list(sample_df.T.to_dict().values())
         
         #add fuzzy duplicate pairs if any were found
         if self.fuzzy_duplicate_pairs:
@@ -504,57 +455,21 @@ class DuplicateDetector:
         
         print(f"✓ Duplicates log saved to {filepath}")
     
-    def print_summary(self):
-        """
-        Print human-readable summary of duplicate detection/removal
-        """
-        print("=" * 70)
-        print("DUPLICATE DETECTION SUMMARY".center(70))
-        print("=" * 70)
+    # def print_summary(self):
+    #     """
+    #     Print human-readable summary of duplicate detection/removal
+    #     """
+    #     print("=" * 70)
+    #     print("DUPLICATE DETECTION SUMMARY".center(70))
+    #     print("=" * 70)
         
-        print(f"\n📊 OVERVIEW")
-        print(f"   {'Original Rows:':<25} {self.original_count:>15,}")
-        print(f"   {'Exact Duplicates Found:':<25} {self.duplicates_found:>15,}")
-        print(f"   {'Fuzzy Duplicate Pairs:':<25} {len(self.fuzzy_duplicate_pairs):>15,}")
-        print(f"   {'Duplicates Removed:':<25} {self.duplicates_removed:>15,}")
+    #     print(f"\n📊 OVERVIEW")
+    #     print(f"   {'Fuzzy Duplicate Pairs:':<25} {len(self.fuzzy_duplicate_pairs):>15,}")
+    #     print(f"   {'Duplicates Removed:':<25} {self.duplicates_removed:>15,}")
         
-        if self.original_count > 0:
-            dup_pct = self.duplicates_found / self.original_count * 100
-            print(f"   {'Exact Dup Percentage:':<25} {dup_pct:>14.2f}%")
+    #     if self.duplicates_log:
+    #         print(f"\n📋 OPERATIONS LOG")
+    #         for i, log_entry in enumerate(self.duplicates_log, 1):
+    #             print(f"   {i}. {log_entry.get('operation', 'unknown')} - {log_entry}")
         
-        #show operations log
-        if self.duplicates_log:
-            print(f"\n🔧 OPERATIONS LOG")
-            print(f"   {'Operation':<20} {'Columns':<15} {'Result':<30}")
-            print(f"   {'-'*20} {'-'*15} {'-'*30}")
-            
-            for log in self.duplicates_log:
-                op = log['operation']
-                
-                if op == 'fuzzy_detection':
-                    cols = 'similarity'
-                    result = f"{log['fuzzy_pairs_found']:,} similar pairs (threshold={log.get('threshold', 0.85)})"
-                elif op == 'fuzzy_removal':
-                    cols = log.get('keep_strategy', 'first')
-                    result = f"Removed {log['duplicates_removed']:,} fuzzy duplicates"
-                else:
-                    cols = 'all' if log['columns_checked'] == 'all' else str(len(log['columns_checked'])) + ' cols'
-                    if op == 'detection':
-                        result = f"{log['duplicates_found']:,} duplicates ({log['duplicate_percentage']}%)"
-                    else:
-                        result = f"Removed {log['duplicates_removed']:,} rows"
-                
-                print(f"   {op:<20} {cols:<15} {result:<30}")
-        
-        #show sample duplicates if any
-        if self.duplicate_rows is not None and len(self.duplicate_rows) > 0:
-            print(f"\n📋 SAMPLE EXACT DUPLICATE ROWS (first 5)")
-            print(self.duplicate_rows.head().to_string())
-        
-        #show sample fuzzy duplicates if any
-        if self.fuzzy_duplicate_pairs:
-            print(f"\n🔍 SAMPLE FUZZY DUPLICATE PAIRS (first 5)")
-            for idx1, idx2, sim in self.fuzzy_duplicate_pairs[:5]:
-                print(f"   Row {idx1} ↔ Row {idx2}: {sim:.2%} similar")
-        
-        print("\n" + "=" * 70)
+    #     print("\n" + "=" * 70)

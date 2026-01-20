@@ -1,0 +1,11 @@
+{
+  "total_corrections": 1,
+  "total_cells_affected": 41188,
+  "corrections": [
+    {
+      "column": "y",
+      "operation": "type_correction (object -> bool)",
+      "cells_affected": 41188
+    }
+  ]
+}

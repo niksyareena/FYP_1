@@ -43,6 +43,9 @@ class FormatCorrector:
         df_corrected = df.copy()
         self.corrections_log = []
         
+        #standardize missing values first (always run this)
+        df_corrected = self.standardize_missing_values(df_corrected)
+        
         #string normalization
         if config.get('normalize_strings', True):
             df_corrected = self.normalize_strings(
@@ -60,6 +63,107 @@ class FormatCorrector:
             df_corrected = self.correct_types(df_corrected)
         
         return df_corrected
+    
+    def standardize_missing_values(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Standardize all missing value representations to proper pandas NA/NaN
+        
+        Converts common missing value markers to pandas NA:
+        - '?', 'NA', 'N/A', 'null', 'NULL', 'None', 'nan', 'NaN', ''
+        - Whitespace-only strings
+        
+        Args:
+            df: Input dataframe
+            
+        Returns:
+            Dataframe with standardized missing values
+        """
+        df_standardized = df.copy()
+        
+        #define missing value markers (matching data profiler)
+        missing_markers = ['?', 'NA', 'N/A', 'null', 'NULL', 'None', 'nan', 'NaN', '']
+        
+        total_replacements = 0
+        
+        for col in df.columns:
+            if df[col].dtype == 'object':
+                #count replacements before
+                original = df[col].copy()
+                
+                #replace missing markers with pd.NA
+                def standardize_value(x):
+                    if pd.isna(x):
+                        return pd.NA
+                    if isinstance(x, str):
+                        x_stripped = x.strip()
+                        if x_stripped in missing_markers or x_stripped == '':
+                            return pd.NA
+                    return x
+                
+                df_standardized[col] = df_standardized[col].apply(standardize_value)
+                
+                #count changes
+                changes = (~original.isna() & df_standardized[col].isna()).sum()
+                if changes > 0:
+                    total_replacements += changes
+        
+        if total_replacements > 0:
+            self.corrections_log.append({
+                'column': 'all_columns',
+                'operation': 'missing_value_standardization',
+                'cells_affected': int(total_replacements)
+            })
+        
+        return df_standardized
+    
+    def is_numeric_range_column(self, series: pd.Series) -> bool:
+        """
+        Detect if a column contains numeric ranges (e.g., '30-39', '10-14')
+        
+        Args:
+            series: pandas Series to check
+            
+        Returns:
+            True if column appears to contain numeric ranges
+        """
+        #sample non-null values
+        sample = series.dropna().head(50)
+        if len(sample) == 0:
+            return False
+        
+        #check if values match numeric range pattern (digit-digit)
+        range_pattern = re.compile(r'^\d+[-]\d+$')
+        matching_count = sum(1 for val in sample if isinstance(val, str) and range_pattern.match(val.strip()))
+        
+        #if >50% of samples are numeric ranges, consider it a range column
+        return (matching_count / len(sample)) > 0.5
+    
+    def is_currency_or_numeric_notation_column(self, series: pd.Series) -> bool:
+        """
+        Detect if a column contains currency or numeric notation (e.g., '$50K', '<=50K', '>100M')
+        These should preserve their casing and special characters.
+        
+        Args:
+            series: pandas Series to check
+            
+        Returns:
+            True if column appears to contain currency/numeric notation
+        """
+        #sample non-null values
+        sample = series.dropna().head(50)
+        if len(sample) == 0:
+            return False
+        
+        #patterns for currency/numeric notation
+        # - Currency symbols: $, €, £, ¥
+        # - Unit suffixes: K, M, B (thousands, millions, billions)
+        # - Comparison operators: <, >, <=, >=, =
+        # - Percentages: %
+        notation_pattern = re.compile(r'[$€£¥%]|[<>=]+|\d+[KMBkmb]\b')
+        matching_count = sum(1 for val in sample if isinstance(val, str) and notation_pattern.search(val))
+        
+        #if >30% of samples contain notation, consider it a notation column
+        return (matching_count / len(sample)) > 0.3
     
     def normalize_strings(self, df: pd.DataFrame, case: str = 'lower', 
                          normalize_punctuation: bool = True) -> pd.DataFrame:
@@ -82,50 +186,81 @@ class FormatCorrector:
         string_cols = df.select_dtypes(include=['object']).columns
         
         for col in string_cols:
-            original = df[col].copy()
+            #capture input state for this operation (not original df input)
+            col_before = df_normalized[col].copy()
             
             #skip if column has no string values
             if not df[col].apply(lambda x: isinstance(x, str)).any():
                 continue
+            
+            #check if this column contains numeric ranges or currency/numeric notation
+            is_range_column = self.is_numeric_range_column(df[col])
+            is_notation_column = self.is_currency_or_numeric_notation_column(df[col])
             
             #trim whitespace
             df_normalized[col] = df_normalized[col].apply(
                 lambda x: x.strip() if isinstance(x, str) else x
             )
             
-            #normalize punctuation/delimiters to spaces (e.g., \"blue-collar\" → \"blue collar\")
-            if normalize_punctuation:
-                df_normalized[col] = df_normalized[col].apply(
-                    lambda x: x.replace('.', ' ').replace('-', ' ').replace('_', ' ') if isinstance(x, str) else x
-                )
+            #conservative punctuation normalization: only fix inconsistent delimiter usage
+            #preserve hyphens by default (meaningful in ranges, compound words, etc)
+            punctuation_normalized = False
+            if normalize_punctuation and not is_range_column and not is_notation_column:
+                #detect if column has mixed delimiter usage (both dots and underscores, etc.)
+                sample = df_normalized[col].dropna().head(100)
+                has_dots = any('.' in str(v) for v in sample if isinstance(v, str))
+                has_underscores = any('_' in str(v) for v in sample if isinstance(v, str))
+                has_multiple_delimiters = sum([has_dots, has_underscores]) > 1
+                
+                #only normalize if there's mixed delimiter usage indicating inconsistency
+                if has_multiple_delimiters:
+                    df_normalized[col] = df_normalized[col].apply(
+                        lambda x: x.replace('.', ' ').replace('_', ' ') if isinstance(x, str) else x
+                    )
+                    punctuation_normalized = True
             
             #normalize internal whitespace (multiple spaces -> single space)
             df_normalized[col] = df_normalized[col].apply(
-                lambda x: re.sub(r'\\s+', ' ', x).strip() if isinstance(x, str) else x
+                lambda x: re.sub(r'\s+', ' ', x).strip() if isinstance(x, str) else x
             )
             
-            #apply casing
-            if case == 'lower':
-                df_normalized[col] = df_normalized[col].apply(
-                    lambda x: x.lower() if isinstance(x, str) else x
-                )
-            elif case == 'upper':
-                df_normalized[col] = df_normalized[col].apply(
-                    lambda x: x.upper() if isinstance(x, str) else x
-                )
-            elif case == 'title':
-                df_normalized[col] = df_normalized[col].apply(
-                    lambda x: x.title() if isinstance(x, str) else x
-                )
+            #apply casing (skip for currency/numeric notation columns)
+            if not is_notation_column:
+                if case == 'lower':
+                    df_normalized[col] = df_normalized[col].apply(
+                        lambda x: x.lower() if isinstance(x, str) else x
+                    )
+                elif case == 'upper':
+                    df_normalized[col] = df_normalized[col].apply(
+                        lambda x: x.upper() if isinstance(x, str) else x
+                    )
+                elif case == 'title':
+                    df_normalized[col] = df_normalized[col].apply(
+                        lambda x: x.title() if isinstance(x, str) else x
+                    )
             
-            #log changes
-            changes = (original != df_normalized[col]).sum()
+            #log changes (exclude NA comparisons which count as not equal)
+            mask = col_before.notna() & df_normalized[col].notna()
+            changes = (col_before[mask] != df_normalized[col][mask]).sum()
             if changes > 0:
-                self.corrections_log.append({
-                    'column': col,
-                    'operation': f'string_normalization (case={case}, punctuation={normalize_punctuation})',
-                    'rows_affected': int(changes)
-                })
+                #determine which operations actually made changes
+                operations_applied = []
+                
+                #add case normalization if it was applied
+                if not is_notation_column and case in ['lower', 'upper', 'title']:
+                    operations_applied.append(f'case={case}')
+                
+                #add punctuation normalization if it was actually applied
+                if punctuation_normalized:
+                    operations_applied.append('punctuation=normalized')
+                
+                if operations_applied:
+                    op_str = ', '.join(operations_applied)
+                    self.corrections_log.append({
+                        'column': col,
+                        'operation': f'string_normalization ({op_str})',
+                        'cells_affected': int(changes)
+                    })
         
         return df_normalized
     
@@ -146,7 +281,7 @@ class FormatCorrector:
             
             try:
                 #try multiple date parsing strategies
-                def parse_date(date_str):
+                def parse_date(date_str: Any) -> Any:
                     if pd.isna(date_str):
                         return pd.NaT
                     
@@ -175,7 +310,7 @@ class FormatCorrector:
                         return pd.NaT
                 
                 #apply parsing to each value
-                df_standardized[col] = df[col].apply(parse_date)
+                df_standardized[col] = df_standardized[col].apply(parse_date)
                 
                 #convert to dd/mm/yyyy format string (handle NaT values)
                 df_standardized[col] = df_standardized[col].apply(
@@ -189,7 +324,7 @@ class FormatCorrector:
                     self.corrections_log.append({
                         'column': col,
                         'operation': 'date_standardization (dd/mm/yyyy)',
-                        'rows_affected': int(changes)
+                        'cells_affected': int(changes)
                     })
             
             except Exception as e:
@@ -267,15 +402,18 @@ class FormatCorrector:
                                 self.corrections_log.append({
                                     'column': col,
                                     'operation': 'type_correction (object -> numeric)',
-                                    'rows_affected': int(changes)
+                                    'cells_affected': int(changes)
                                 })
                             continue
                 except:
                     pass
                 
                 #try boolean conversion
-                unique_vals = df[col].dropna().unique()
-                if len(unique_vals) <= 2:
+                #first, filter out common missing value markers
+                missing_markers = ['?', 'NA', 'N/A', 'null', 'NULL', 'None', 'nan', 'NaN', '']
+                unique_vals = [v for v in df[col].dropna().unique() if str(v).strip() not in missing_markers]
+                
+                if len(unique_vals) <= 2 and len(unique_vals) > 0:
                     #check for boolean patterns
                     bool_patterns = {
                         'true': True, 'false': False,
@@ -288,14 +426,21 @@ class FormatCorrector:
                     #normalize and check
                     normalized_vals = {str(v).lower().strip() for v in unique_vals}
                     if normalized_vals.issubset(set(bool_patterns.keys())):
-                        df_corrected[col] = df[col].apply(
-                            lambda x: bool_patterns.get(str(x).lower().strip()) if pd.notna(x) else x
-                        )
+                        #apply conversion, treating missing markers as NaN
+                        def convert_to_bool(x):
+                            if pd.notna(x):
+                                x_str = str(x).strip()
+                                if x_str in missing_markers:
+                                    return pd.NA
+                                return bool_patterns.get(x_str.lower())
+                            return x
+                        
+                        df_corrected[col] = df_corrected[col].apply(convert_to_bool)
                         
                         self.corrections_log.append({
                             'column': col,
                             'operation': 'type_correction (object -> bool)',
-                            'rows_affected': int(df[col].notna().sum())
+                            'cells_affected': int(df[col].notna().sum())
                         })
         
         return df_corrected
@@ -303,7 +448,7 @@ class FormatCorrector:
     def get_corrections_summary(self) -> pd.DataFrame:
         
         if not self.corrections_log:
-            return pd.DataFrame(columns=['column', 'operation', 'rows_affected'])
+            return pd.DataFrame(columns=['column', 'operation', 'cells_affected'])
         
         return pd.DataFrame(self.corrections_log)
     
@@ -313,7 +458,7 @@ class FormatCorrector:
         
         log_data = {
             'total_corrections': len(self.corrections_log),
-            'total_rows_affected': sum(item['rows_affected'] for item in self.corrections_log) if self.corrections_log else 0,
+            'total_cells_affected': sum(item['cells_affected'] for item in self.corrections_log) if self.corrections_log else 0,
             'corrections': self.corrections_log
         }
         
@@ -335,13 +480,12 @@ class FormatCorrector:
         summary_df = self.get_corrections_summary()
         
         print(f"\n📝 Total Corrections: {len(self.corrections_log)}")
-        print(f"   Total Rows Affected: {summary_df['rows_affected'].sum():,}")
         
         print(f"\n🔧 CORRECTIONS BY COLUMN")
-        print(f"   {'Column':<25} {'Operation':<30} {'Rows Affected':<15}")
-        print(f"   {'-'*25} {'-'*30} {'-'*15}")
+        print(f"   {'Column':<25} {'Operation':<30}")
+        print(f"   {'-'*25} {'-'*30}")
         
         for _, row in summary_df.iterrows():
-            print(f"   {row['column']:<25} {row['operation']:<30} {row['rows_affected']:<15,}")
+            print(f"   {row['column']:<25} {row['operation']:<30}")
         
         print("\n" + "=" * 70)

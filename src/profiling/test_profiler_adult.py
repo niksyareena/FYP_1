@@ -2,27 +2,15 @@
 Test Data Profiler with UCI Adult Dataset
 """
 
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 import pandas as pd
 from src.profiling.data_profiler import DataProfiler
 
 
 def load_adult_dataset():
-    """Load UCI Adult dataset from adult.data file"""
-    
-    #column names from adult.names documentation
-    column_names = [
-        'age', 'workclass', 'fnlwgt', 'education', 'education-num',
-        'marital-status', 'occupation', 'relationship', 'race', 'sex',
-        'capital-gain', 'capital-loss', 'hours-per-week', 'native-country', 'income'
-    ]
-    
-    #load adult.data file (no header, comma-separated)
-    df = pd.read_csv(
-        'datasets/adult/adult.data',
-        names=column_names,
-        header=None,
-        skipinitialspace=True  #remove leading spaces
-    )
+    df = pd.read_csv("datasets/adult/adult.csv")
     
     return df
 

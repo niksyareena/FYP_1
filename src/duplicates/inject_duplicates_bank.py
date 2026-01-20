@@ -4,32 +4,22 @@ Test duplicate detection with injected duplicates in Bank Marketing dataset
 
 import pandas as pd
 import numpy as np
-import sys
-import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-from duplicates.duplicate_detector import DuplicateDetector
-from format_correction.format_corrector import FormatCorrector
 
+#load format corrected data (following the order of the pipeline)
 def load_bank_data():
-    """Load Bank Marketing dataset and apply format correction"""
-    df = pd.read_csv('datasets/bank-additional/bank-additional.csv', sep=';')
-    
-    print("Applying format correction to original dataset...")
-    corrector = FormatCorrector()
-    df_corrected = corrector.normalize_strings(df, case='lower', normalize_punctuation=True)
-    print(f"✓ Format correction applied (normalized punctuation and case)")
-    
-    return df_corrected
+    df = pd.read_csv('data/output/bank_corrected.csv')
+    print(f"✓ Loaded pre-corrected Bank Marketing dataset")
+    return df
 
-def create_test_dataset_with_injected_duplicates(df, n_base=500, n_exact=50, n_fuzzy=100):
+def create_test_dataset_with_injected_duplicates(df, n_base=500, n_exact=5, n_fuzzy=100):
     """
     Create a controlled test dataset with known duplicates
     
     Args:
-        df: Original Bank Marketing dataset
+        df: Pre-corrected Bank Marketing dataset
         n_base: Number of base rows to use
-        n_exact: Number of exact duplicates to inject
-        n_fuzzy: Number of fuzzy duplicates to inject
+        n_exact: Number of exact duplicates to inject (integration check)
+        n_fuzzy: Number of fuzzy duplicates to inject (main testing focus)
     
     Returns:
         Test dataframe and ground truth
@@ -80,23 +70,23 @@ def create_test_dataset_with_injected_duplicates(df, n_base=500, n_exact=50, n_f
     #character-level typos only (no semantic variations or abbreviations)
     #2 variations per value for better distribution across fields
     job_typos = {
-        'blue collar': ['blu collar', 'blue colar'],
-        'self employed': ['self emploied', 'self employd'],
+        'blue-collar': ['blu-collar', 'blue-colar'],
+        'self-employed': ['self-emploied', 'self-employd'],
         'management': ['managment', 'mangement'],
         'housemaid': ['housemiad', 'housemaed'],
         'entrepreneur': ['entrepeneur', 'enterpreneur'],
-        'admin': ['admn', 'adimn'],
+        'admin.': ['admn.', 'adimn.'],
         'technician': ['technican', 'techncian'],
         'services': ['servies', 'sevices']
     }
     
     education_typos = {
-        'university degree': ['universty degree', 'univeristy degree'],
-        'high school': ['hgh school', 'high shool'],
-        'professional course': ['profesional course', 'proffessional course'],
-        'basic 9y': ['basci 9y', 'basic 9 y'],
-        'basic 6y': ['basci 6y', 'basic 6 y'],
-        'basic 4y': ['basci 4y', 'basic 4 y']
+        'university.degree': ['universty.degree', 'univeristy.degree'],
+        'high.school': ['hgh.school', 'high.shool'],
+        'professional.course': ['profesional.course', 'proffessional.course'],
+        'basic.9y': ['basci.9y', 'basic.9 y'],
+        'basic.6y': ['basci.6y', 'basic.6 y'],
+        'basic.4y': ['basci.4y', 'basic.4 y']
     }
     
     marital_typos = {
@@ -175,8 +165,8 @@ def create_test_dataset_with_injected_duplicates(df, n_base=500, n_exact=50, n_f
     print(f"{'='*70}\n")
     
     # Save for inspection
-    print("Saving test dataset to 'data/output/test_duplicates_bank.csv'...")
-    final_df.to_csv('data/output/test_duplicates_bank.csv', index=False)
+    print("Saving test dataset to 'data/output/test_duplicates_injected_bank.csv'...")
+    final_df.to_csv('data/output/test_duplicates_injected_bank.csv', index=False)
     print("✓ Saved\n")
     
     ground_truth = {
@@ -196,7 +186,7 @@ def main():
     df_test, ground_truth = create_test_dataset_with_injected_duplicates(
         df, 
         n_base=500,
-        n_exact=50,
+        n_exact=5,
         n_fuzzy=100
     )
 

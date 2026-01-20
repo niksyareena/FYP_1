@@ -55,141 +55,141 @@
     },
     "missing_percentages": {
       "age": 0.0,
-      "workclass": 5.638647461687294,
+      "workclass": 5.64,
       "fnlwgt": 0.0,
       "education": 0.0,
       "education-num": 0.0,
       "marital-status": 0.0,
-      "occupation": 5.660145572924664,
+      "occupation": 5.66,
       "relationship": 0.0,
       "race": 0.0,
       "sex": 0.0,
       "capital-gain": 0.0,
       "capital-loss": 0.0,
       "hours-per-week": 0.0,
-      "native-country": 1.7904855501980899,
+      "native-country": 1.79,
       "income": 0.0
     },
     "n_duplicates": 24,
-    "duplicate_percentage": 0.07370780995669667,
+    "duplicate_percentage": 0.07,
     "memory_mb": 17.65
   },
   "numeric_columns": {
     "columns": {
       "age": {
         "count": 32561,
-        "mean": 38.58164675532078,
-        "median": 37.0,
-        "std": 13.640432553581341,
-        "min": 17.0,
-        "max": 90.0,
-        "q25": 28.0,
-        "q75": 48.0,
-        "skewness": 0.5587433694130484
+        "mean": 38.5816,
+        "median": 37,
+        "std": 13.6404,
+        "min": 17,
+        "max": 90,
+        "q25": 28,
+        "q75": 48,
+        "skewness": 0.5587
       },
       "fnlwgt": {
         "count": 32561,
-        "mean": 189778.36651208502,
-        "median": 178356.0,
-        "std": 105549.97769702224,
-        "min": 12285.0,
-        "max": 1484705.0,
-        "q25": 117827.0,
-        "q75": 237051.0,
-        "skewness": 1.4469800945789821
+        "mean": 189778.3665,
+        "median": 178356,
+        "std": 105549.9777,
+        "min": 12285,
+        "max": 1484705,
+        "q25": 117827,
+        "q75": 237051,
+        "skewness": 1.447
       },
       "education-num": {
         "count": 32561,
-        "mean": 10.0806793403151,
-        "median": 10.0,
-        "std": 2.5727203320673877,
-        "min": 1.0,
-        "max": 16.0,
-        "q25": 9.0,
-        "q75": 12.0,
-        "skewness": -0.3116758679102297
+        "mean": 10.0807,
+        "median": 10,
+        "std": 2.5727,
+        "min": 1,
+        "max": 16,
+        "q25": 9,
+        "q75": 12,
+        "skewness": -0.3117
       },
       "capital-gain": {
         "count": 32561,
-        "mean": 1077.6488437087312,
-        "median": 0.0,
-        "std": 7385.292084840338,
-        "min": 0.0,
-        "max": 99999.0,
-        "q25": 0.0,
-        "q75": 0.0,
-        "skewness": 11.953847687699804
+        "mean": 1077.6488,
+        "median": 0,
+        "std": 7385.2921,
+        "min": 0,
+        "max": 99999,
+        "q25": 0,
+        "q75": 0,
+        "skewness": 11.9538
       },
       "capital-loss": {
         "count": 32561,
-        "mean": 87.303829734959,
-        "median": 0.0,
-        "std": 402.9602186489997,
-        "min": 0.0,
-        "max": 4356.0,
-        "q25": 0.0,
-        "q75": 0.0,
-        "skewness": 4.594629121679695
+        "mean": 87.3038,
+        "median": 0,
+        "std": 402.9602,
+        "min": 0,
+        "max": 4356,
+        "q25": 0,
+        "q75": 0,
+        "skewness": 4.5946
       },
       "hours-per-week": {
         "count": 32561,
-        "mean": 40.437455852092995,
-        "median": 40.0,
-        "std": 12.347428681731843,
-        "min": 1.0,
-        "max": 99.0,
-        "q25": 40.0,
-        "q75": 45.0,
-        "skewness": 0.227642536804501
+        "mean": 40.4375,
+        "median": 40,
+        "std": 12.3474,
+        "min": 1,
+        "max": 99,
+        "q25": 40,
+        "q75": 45,
+        "skewness": 0.2276
       }
     },
     "correlation_matrix": {
       "age": {
         "age": 1.0,
-        "fnlwgt": -0.0766458678750406,
-        "education-num": 0.03652718946410631,
-        "capital-gain": 0.07767449816599412,
-        "capital-loss": 0.05777453947897414,
-        "hours-per-week": 0.06875570750955735
+        "fnlwgt": -0.0766,
+        "education-num": 0.0365,
+        "capital-gain": 0.0777,
+        "capital-loss": 0.0578,
+        "hours-per-week": 0.0688
       },
       "fnlwgt": {
-        "age": -0.0766458678750406,
+        "age": -0.0766,
         "fnlwgt": 1.0,
-        "education-num": -0.043194632733022695,
-        "capital-gain": 0.0004318857918868016,
-        "capital-loss": -0.010251711675330937,
-        "hours-per-week": -0.018768490610745134
+        "education-num": -0.0432,
+        "capital-gain": 0.0004,
+        "capital-loss": -0.0103,
+        "hours-per-week": -0.0188
       },
       "education-num": {
-        "age": 0.03652718946410631,
-        "fnlwgt": -0.043194632733022695,
+        "age": 0.0365,
+        "fnlwgt": -0.0432,
         "education-num": 1.0,
-        "capital-gain": 0.12263011469222229,
-        "capital-loss": 0.0799229566866459,
-        "hours-per-week": 0.14812273262291142
+        "capital-gain": 0.1226,
+        "capital-loss": 0.0799,
+        "hours-per-week": 0.1481
       },
       "capital-gain": {
-        "age": 0.07767449816599412,
-        "fnlwgt": 0.0004318857918868016,
-        "education-num": 0.12263011469222229,
+        "age": 0.0777,
+        "fnlwgt": 0.0004,
+        "education-num": 0.1226,
         "capital-gain": 1.0,
-        "capital-loss": -0.03161506295222775,
-        "hours-per-week": 0.07840861539013491
+        "capital-loss": -0.0316,
+        "hours-per-week": 0.0784
       },
       "capital-loss": {
-        "age": 0.05777453947897414,
-        "fnlwgt": -0.010251711675330937,
-        "education-num": 0.0799229566866459,
-        "capital-gain": -0.03161506295222775,
+        "age": 0.0578,
+        "fnlwgt": -0.0103,
+        "education-num": 0.0799,
+        "capital-gain": -0.0316,
         "capital-loss": 1.0,
-        "hours-per-week": 0.05425636227265108
+        "hours-per-week": 0.0543
       },
       "hours-per-week": {
-        "age": 0.06875570750955735,
-        "fnlwgt": -0.018768490610745134,
-        "education-num": 0.14812273262291142,
-        "capital-gain": 0.07840861539013491,
-        "capital-loss": 0.05425636227265108,
+        "age": 0.0688,
+        "fnlwgt": -0.0188,
+        "education-num": 0.1481,
+        "capital-gain": 0.0784,
+        "capital-loss": 0.0543,
         "hours-per-week": 1.0
       }
     }

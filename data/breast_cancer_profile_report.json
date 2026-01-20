@@ -44,28 +44,28 @@
       "menopause": 0.0,
       "tumor-size": 0.0,
       "inv-nodes": 0.0,
-      "node-caps": 2.797202797202797,
+      "node-caps": 2.8,
       "deg-malig": 0.0,
       "breast": 0.0,
-      "breast-quad": 0.34965034965034963,
+      "breast-quad": 0.35,
       "irradiat": 0.0
     },
     "n_duplicates": 14,
-    "duplicate_percentage": 4.895104895104895,
+    "duplicate_percentage": 4.9,
     "memory_mb": 0.14
   },
   "numeric_columns": {
     "columns": {
       "deg-malig": {
         "count": 286,
-        "mean": 2.0489510489510487,
-        "median": 2.0,
-        "std": 0.7382166403717156,
-        "min": 1.0,
-        "max": 3.0,
-        "q25": 2.0,
-        "q75": 3.0,
-        "skewness": -0.07766077366474193
+        "mean": 2.049,
+        "median": 2,
+        "std": 0.7382,
+        "min": 1,
+        "max": 3,
+        "q25": 2,
+        "q75": 3,
+        "skewness": -0.0777
       }
     },
     "correlation_matrix": {
