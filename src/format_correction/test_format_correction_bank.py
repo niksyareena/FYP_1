@@ -17,7 +17,7 @@ pd.set_option('display.max_colwidth', 50)
 
 def load_bank_dataset():
     """Load Bank Marketing dataset"""
-    df = pd.read_csv("datasets/bank-additional/bank-additional-full.csv", sep=';')
+    df = pd.read_csv("datasets/bank-additional/bank-additional.csv")
     return df
 
 

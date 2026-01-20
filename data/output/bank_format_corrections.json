@@ -1,11 +1,11 @@
 {
   "total_corrections": 1,
-  "total_cells_affected": 41188,
+  "total_cells_affected": 4119,
   "corrections": [
     {
       "column": "y",
       "operation": "type_correction (object -> bool)",
-      "cells_affected": 41188
+      "cells_affected": 4119
     }
   ]
 }
