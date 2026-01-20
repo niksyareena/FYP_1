@@ -7,7 +7,7 @@ import pandas as pd
 import time
 from duplicate_detector import DuplicateDetector
 
-def load_adult_data(use_sample=True, sample_size=1000):
+def load_adult_data(use_sample=True, sample_size=4000):
     """Load the format-corrected Adult dataset"""
     print(f"\n{'='*70}")
     print("LOADING ADULT DATASET")
@@ -146,8 +146,8 @@ def main():
     overall_start = time.time()
     
     # Configuration
-    USE_SAMPLE = False # Set to False to run on full dataset
-    SAMPLE_SIZE = 1000  # Number of rows to sample
+    USE_SAMPLE = True # Set to False to run on full dataset
+    SAMPLE_SIZE = 4000  # Number of rows to sample (matching Bank dataset size)
     THRESHOLD = 0.8
     
     # Load data
