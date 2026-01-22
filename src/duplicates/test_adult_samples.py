@@ -7,7 +7,7 @@ import pandas as pd
 import time
 from duplicate_detector import DuplicateDetector
 
-def load_adult_data(use_sample=True, sample_size=4000):
+def load_adult_data(sample_size, random_state):
     """Load the format-corrected Adult dataset"""
     print(f"\n{'='*70}")
     print("LOADING ADULT DATASET")
@@ -19,13 +19,9 @@ def load_adult_data(use_sample=True, sample_size=4000):
     print(f"✓ Loaded {len(df):,} rows, {len(df.columns)} columns")
     print(f"✓ Using format-corrected data from pipeline")
     
-    if use_sample:
-        df_sample = df.sample(n=min(sample_size, len(df)), random_state=42)
-        print(f"✓ Sampled {len(df_sample):,} rows for testing (set use_sample=False for full dataset)\n")
-        return df_sample, len(df)
-    else:
-        print(f"✓ Using FULL dataset\n")
-        return df, len(df)
+    df_sample = df.sample(n=min(sample_size, len(df)), random_state=random_state)
+    print(f"✓ Sampled {len(df_sample):,} rows (random_state={random_state})\n")
+    return df_sample, len(df)
 
 def test_exact_duplicates(df):
     """Test exact duplicate detection"""
@@ -138,26 +134,54 @@ def test_fuzzy_duplicates(df, threshold=0.8):
     return detector, fuzzy_pairs
 
 def main():
-    """Run duplicate detection on Adult dataset"""
+    """Run duplicate detection on Adult dataset - Execution Time Analysis"""
     print(f"\n{'='*70}")
     print("DUPLICATE DETECTION - ADULT DATASET")
     print(f"{'='*70}")
     
     overall_start = time.time()
     
-    # Configuration
-    USE_SAMPLE = True # Set to False to run on full dataset
-    SAMPLE_SIZE = 4000  # Number of rows to sample (matching Bank dataset size)
+    # Configuration - Execution Time Analysis
+    # Test different sample sizes to validate O(n²) complexity
+    # Uncomment ONE sample size at a time to run each test
+    
     THRESHOLD = 0.8
     
+    #test 3
+    SAMPLE_SIZE = 1000
+    RANDOM_STATE = 101
+    
+    #test 2
+    # SAMPLE_SIZE = 2000
+    # RANDOM_STATE = 102
+    
+    #test 1
+    # SAMPLE_SIZE = 4000
+    # RANDOM_STATE = 42
+    
     # Load data
-    df, total_rows = load_adult_data(use_sample=USE_SAMPLE, sample_size=SAMPLE_SIZE)
+    df, total_rows = load_adult_data(sample_size=SAMPLE_SIZE, random_state=RANDOM_STATE)
     
     # Step 1: Detect exact duplicates
     exact_detector, exact_duplicates = test_exact_duplicates(df)
     
     # Step 2: Detect fuzzy duplicates
     fuzzy_detector, fuzzy_pairs = test_fuzzy_duplicates(df, threshold=THRESHOLD)
+    
+    # Step 3: Interactive fuzzy duplicate removal (if any found)
+    if len(fuzzy_pairs) > 0:
+        print(f"\n{'='*70}")
+        print("STEP 3: INTERACTIVE FUZZY DUPLICATE REMOVAL")
+        print(f"{'='*70}\n")
+        
+        df_cleaned = fuzzy_detector.remove_fuzzy_duplicates(df, fuzzy_pairs=fuzzy_pairs, interactive=True)
+        
+        removed_count = len(df) - len(df_cleaned)
+        print(f"\n✓ Rows removed: {removed_count}")
+        print(f"✓ Rows remaining: {len(df_cleaned):,}")
+    else:
+        print(f"\n✓ No fuzzy duplicates found - no removal needed")
+        df_cleaned = df
     
     # Save results using detector's built-in method
     print(f"\n{'='*70}")
@@ -174,18 +198,22 @@ def main():
     print(f"{'='*70}")
     print(f"\nDataset: Adult (format-corrected)")
     print(f"Total rows in full dataset: {total_rows:,}")
-    print(f"Rows tested: {len(df):,} {'(SAMPLE)' if USE_SAMPLE else '(FULL)'}")
+    print(f"Rows tested: {len(df):,} (SAMPLE)")
+    print(f"Random state: {RANDOM_STATE}")
     print(f"\nResults:")
     print(f"   Exact duplicates: {len(exact_duplicates):,}")
     print(f"   Fuzzy duplicate pairs: {len(fuzzy_pairs):,} (threshold={THRESHOLD})")
-    print(f"\n⏱️  Total Execution Time: {overall_time:.2f} seconds")
+    print(f"\n⏱️  Total Execution Time: {overall_time:.2f} seconds ({overall_time/60:.2f} minutes)")
+    print(f"\nExpected comparisons: {len(df) * (len(df) - 1) // 2:,}")
+    print(f"Time per comparison: {(overall_time / (len(df) * (len(df) - 1) // 2)) * 1000:.4f} ms")
     
-    if USE_SAMPLE:
-        # Estimate full dataset time
-        estimated_time = (overall_time / len(df)) * total_rows * (total_rows / len(df))
-        print(f"\n💡 Estimated time for FULL dataset: ~{estimated_time/60:.1f} minutes")
-        print(f"   To run on full dataset, set USE_SAMPLE = False in the script")
-    
+    # Scaling reference
+    print(f"\n{'='*70}")
+    print("COMPLEXITY VALIDATION (O(n²) Scaling)")
+    print(f"{'='*70}")
+    print(f"Sample size doubling should result in ~4x execution time increase:")
+    print(f"  1,000 rows → 2,000 rows: 4x increase expected")
+    print(f"  2,000 rows → 4,000 rows: 4x increase expected")
     print(f"{'='*70}\n")
 
 if __name__ == "__main__":
