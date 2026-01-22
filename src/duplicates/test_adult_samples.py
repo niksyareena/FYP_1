@@ -147,13 +147,13 @@ def main():
     
     THRESHOLD = 0.8
     
-    #test 3
-    SAMPLE_SIZE = 1000
-    RANDOM_STATE = 101
-    
     #test 2
-    # SAMPLE_SIZE = 2000
-    # RANDOM_STATE = 102
+    #SAMPLE_SIZE = 1000
+    #RANDOM_STATE = 101
+    
+    #test 3
+    SAMPLE_SIZE = 2000
+    RANDOM_STATE = 102
     
     #test 1
     # SAMPLE_SIZE = 4000
@@ -207,14 +207,6 @@ def main():
     print(f"\nExpected comparisons: {len(df) * (len(df) - 1) // 2:,}")
     print(f"Time per comparison: {(overall_time / (len(df) * (len(df) - 1) // 2)) * 1000:.4f} ms")
     
-    # Scaling reference
-    print(f"\n{'='*70}")
-    print("COMPLEXITY VALIDATION (O(n²) Scaling)")
-    print(f"{'='*70}")
-    print(f"Sample size doubling should result in ~4x execution time increase:")
-    print(f"  1,000 rows → 2,000 rows: 4x increase expected")
-    print(f"  2,000 rows → 4,000 rows: 4x increase expected")
-    print(f"{'='*70}\n")
 
 if __name__ == "__main__":
     main()
