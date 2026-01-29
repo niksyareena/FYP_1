@@ -1,0 +1,246 @@
+{
+  "dataset_level": {
+    "n_rows": 2000,
+    "n_columns": 15,
+    "dtypes": {
+      "age": "int64",
+      "workclass": "object",
+      "fnlwgt": "int64",
+      "education": "object",
+      "education-num": "int64",
+      "marital-status": "object",
+      "occupation": "object",
+      "relationship": "object",
+      "race": "object",
+      "sex": "object",
+      "capital-gain": "int64",
+      "capital-loss": "int64",
+      "hours-per-week": "int64",
+      "native-country": "object",
+      "income": "object"
+    },
+    "non_null_counts": {
+      "age": 2000,
+      "workclass": 1875,
+      "fnlwgt": 2000,
+      "education": 2000,
+      "education-num": 2000,
+      "marital-status": 2000,
+      "occupation": 1875,
+      "relationship": 2000,
+      "race": 2000,
+      "sex": 2000,
+      "capital-gain": 2000,
+      "capital-loss": 2000,
+      "hours-per-week": 2000,
+      "native-country": 1958,
+      "income": 2000
+    },
+    "missing_counts": {
+      "age": 0,
+      "workclass": 125,
+      "fnlwgt": 0,
+      "education": 0,
+      "education-num": 0,
+      "marital-status": 0,
+      "occupation": 125,
+      "relationship": 0,
+      "race": 0,
+      "sex": 0,
+      "capital-gain": 0,
+      "capital-loss": 0,
+      "hours-per-week": 0,
+      "native-country": 42,
+      "income": 0
+    },
+    "missing_percentages": {
+      "age": 0.0,
+      "workclass": 6.25,
+      "fnlwgt": 0.0,
+      "education": 0.0,
+      "education-num": 0.0,
+      "marital-status": 0.0,
+      "occupation": 6.25,
+      "relationship": 0.0,
+      "race": 0.0,
+      "sex": 0.0,
+      "capital-gain": 0.0,
+      "capital-loss": 0.0,
+      "hours-per-week": 0.0,
+      "native-country": 2.1,
+      "income": 0.0
+    },
+    "n_duplicates": 0,
+    "duplicate_percentage": 0.0,
+    "memory_mb": 1.1
+  },
+  "numeric_columns": {
+    "columns": {
+      "age": {
+        "count": 2000,
+        "mean": 39.061,
+        "median": 38,
+        "std": 13.6683,
+        "min": 17,
+        "max": 90,
+        "q25": 28,
+        "q75": 48,
+        "skewness": 0.5309
+      },
+      "fnlwgt": {
+        "count": 2000,
+        "mean": 186761.1375,
+        "median": 175931,
+        "std": 103805.5377,
+        "min": 20534,
+        "max": 972354,
+        "q25": 116554.25,
+        "q75": 234358.5,
+        "skewness": 1.2541
+      },
+      "education-num": {
+        "count": 2000,
+        "mean": 10.027,
+        "median": 10,
+        "std": 2.6057,
+        "min": 1,
+        "max": 16,
+        "q25": 9,
+        "q75": 12,
+        "skewness": -0.3241
+      },
+      "capital-gain": {
+        "count": 2000,
+        "mean": 1147.4585,
+        "median": 0,
+        "std": 7767.071,
+        "min": 0,
+        "max": 99999,
+        "q25": 0,
+        "q75": 0,
+        "skewness": 11.517
+      },
+      "capital-loss": {
+        "count": 2000,
+        "mean": 93.388,
+        "median": 0,
+        "std": 421.6623,
+        "min": 0,
+        "max": 2559,
+        "q25": 0,
+        "q75": 0,
+        "skewness": 4.374
+      },
+      "hours-per-week": {
+        "count": 2000,
+        "mean": 40.3735,
+        "median": 40,
+        "std": 11.9441,
+        "min": 2,
+        "max": 99,
+        "q25": 40,
+        "q75": 45,
+        "skewness": 0.034
+      }
+    },
+    "correlation_matrix": {
+      "age": {
+        "age": 1.0,
+        "fnlwgt": -0.0752,
+        "education-num": 0.0094,
+        "capital-gain": 0.0545,
+        "capital-loss": 0.0771,
+        "hours-per-week": 0.0703
+      },
+      "fnlwgt": {
+        "age": -0.0752,
+        "fnlwgt": 1.0,
+        "education-num": -0.0734,
+        "capital-gain": -0.0116,
+        "capital-loss": 0.0033,
+        "hours-per-week": -0.0223
+      },
+      "education-num": {
+        "age": 0.0094,
+        "fnlwgt": -0.0734,
+        "education-num": 1.0,
+        "capital-gain": 0.1416,
+        "capital-loss": 0.0873,
+        "hours-per-week": 0.1807
+      },
+      "capital-gain": {
+        "age": 0.0545,
+        "fnlwgt": -0.0116,
+        "education-num": 0.1416,
+        "capital-gain": 1.0,
+        "capital-loss": -0.0327,
+        "hours-per-week": 0.1025
+      },
+      "capital-loss": {
+        "age": 0.0771,
+        "fnlwgt": 0.0033,
+        "education-num": 0.0873,
+        "capital-gain": -0.0327,
+        "capital-loss": 1.0,
+        "hours-per-week": 0.0721
+      },
+      "hours-per-week": {
+        "age": 0.0703,
+        "fnlwgt": -0.0223,
+        "education-num": 0.1807,
+        "capital-gain": 0.1025,
+        "capital-loss": 0.0721,
+        "hours-per-week": 1.0
+      }
+    }
+  },
+  "categorical_columns": {
+    "columns": {
+      "workclass": {
+        "count": 1875,
+        "cardinality": 7,
+        "mode": "Private"
+      },
+      "education": {
+        "count": 2000,
+        "cardinality": 16,
+        "mode": "HS-grad"
+      },
+      "marital-status": {
+        "count": 2000,
+        "cardinality": 6,
+        "mode": "Married-civ-spouse"
+      },
+      "occupation": {
+        "count": 1875,
+        "cardinality": 14,
+        "mode": "Prof-specialty"
+      },
+      "relationship": {
+        "count": 2000,
+        "cardinality": 6,
+        "mode": "Husband"
+      },
+      "race": {
+        "count": 2000,
+        "cardinality": 5,
+        "mode": "White"
+      },
+      "sex": {
+        "count": 2000,
+        "cardinality": 2,
+        "mode": "Male"
+      },
+      "native-country": {
+        "count": 1958,
+        "cardinality": 35,
+        "mode": "United-States"
+      },
+      "income": {
+        "count": 2000,
+        "cardinality": 2,
+        "mode": "<=50K"
+      }
+    }
+  }
+}

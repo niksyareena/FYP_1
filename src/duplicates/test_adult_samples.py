@@ -7,20 +7,57 @@ import pandas as pd
 import time
 from duplicate_detector import DuplicateDetector
 
-def load_adult_data(sample_size, random_state):
-    """Load the format-corrected Adult dataset"""
+def load_adult_data(sample_size, random_state, include_duplicates=True):
+    """Load the format-corrected Adult dataset with option to include all duplicates"""
     print(f"\n{'='*70}")
     print("LOADING ADULT DATASET")
     print(f"{'='*70}\n")
     
-    # Load the corrected dataset from format correction step
     df = pd.read_csv('data/output/adult_corrected.csv')
     
     print(f"✓ Loaded {len(df):,} rows, {len(df.columns)} columns")
     print(f"✓ Using format-corrected data from pipeline")
     
-    df_sample = df.sample(n=min(sample_size, len(df)), random_state=random_state)
-    print(f"✓ Sampled {len(df_sample):,} rows (random_state={random_state})\n")
+    if include_duplicates:
+        #find all duplicate rows in full dataset
+        duplicate_mask = df.duplicated(keep=False)
+        duplicate_indices = df[duplicate_mask].index.tolist()
+        
+        if len(duplicate_indices) > 0:
+            print(f"✓ Found {len(duplicate_indices)} duplicate rows in full dataset")
+            
+            #get non-duplicate rows
+            non_duplicate_indices = df[~duplicate_mask].index.tolist()
+            
+            #calculate remaining space for random rows
+            remaining_size = max(0, sample_size - len(duplicate_indices))
+            
+            if remaining_size > 0:
+                #sample random non-duplicate rows
+                sampled_non_dup = pd.Series(non_duplicate_indices).sample(
+                    n=min(remaining_size, len(non_duplicate_indices)), 
+                    random_state=random_state
+                ).tolist()
+                
+                #combine all duplicates + random non-duplicates
+                selected_indices = duplicate_indices + sampled_non_dup
+                df_sample = df.loc[selected_indices].sample(frac=1, random_state=random_state).reset_index(drop=True)
+                
+                print(f"✓ Sample: {len(duplicate_indices)} duplicates + {len(sampled_non_dup)} random rows = {len(df_sample):,} total")
+            else:
+                #sample size too small, only take duplicates
+                df_sample = df.loc[duplicate_indices].sample(frac=1, random_state=random_state).reset_index(drop=True)
+                print(f"✓ Sample: {len(df_sample):,} rows (all duplicates)")
+        else:
+            print(f"✓ No duplicates found in dataset")
+            df_sample = df.sample(n=min(sample_size, len(df)), random_state=random_state)
+            print(f"✓ Sample: {len(df_sample):,} random rows")
+    else:
+        #regular random sampling
+        df_sample = df.sample(n=min(sample_size, len(df)), random_state=random_state)
+        print(f"✓ Sample: {len(df_sample):,} random rows")
+    
+    print(f"✓ Random state: {random_state}\n")
     return df_sample, len(df)
 
 def test_exact_duplicates(df):
@@ -29,7 +66,7 @@ def test_exact_duplicates(df):
     print("STEP 1: EXACT DUPLICATE DETECTION")
     print(f"{'='*70}\n")
     
-    detector = DuplicateDetector()
+    detector = DuplicateDetector()  
     
     print("Detecting exact duplicates...")
     start_time = time.time()
@@ -44,12 +81,12 @@ def test_exact_duplicates(df):
     print(f"   Execution time: {elapsed_time:.2f} seconds")
     
     if len(duplicate_rows) > 0:
-        # Group duplicates together
+        #group duplicates together
         print(f"\n📋 Exact Duplicate Groups:")
         print(f"   Total duplicate groups found: {len(duplicate_rows)}")
         print(f"   Showing first 3 groups with FULL rows:\n")
         
-        # Find which rows each duplicate matches
+        #find which rows each duplicate matches
         shown = 0
         seen_duplicates = set()
         
@@ -57,7 +94,7 @@ def test_exact_duplicates(df):
             if dup_idx in seen_duplicates or shown >= 3:
                 break
                 
-            # Find all rows identical to this one
+            #find all rows identical to this one
             dup_row = df.loc[dup_idx]
             matches = df[df.eq(dup_row).all(axis=1)].index.tolist()
             
@@ -69,30 +106,29 @@ def test_exact_duplicates(df):
                 print(f"   Indices: {matches}")
                 print(f"   {'='*65}")
                 
-                # Show FULL rows for all duplicates in this group
+                #show full rows
                 for idx in matches:
                     print(f"\n   Row {idx} (full record):")
                     for col, val in df.loc[idx].items():
                         print(f"      {col}: {val}")
-                print()  # Extra space between groups
+                print() 
     
     print(f"\n{'='*70}\n")
     return detector, duplicate_rows
 
-def test_fuzzy_duplicates(df, threshold=0.8):
-    """Test fuzzy duplicate detection"""
+def test_fuzzy_duplicates(df):
+    """Test fuzzy duplicate detection (uses default threshold of 0.8)"""
     print(f"\n{'='*70}")
-    print(f"STEP 2: FUZZY DUPLICATE DETECTION (threshold={threshold})")
+    print(f"STEP 2: FUZZY DUPLICATE DETECTION (threshold=0.80)")
     print(f"{'='*70}\n")
     
-    detector = DuplicateDetector(fuzzy_threshold=threshold)
+    detector = DuplicateDetector()  
     
     print(f"Detecting fuzzy duplicates...")
-    print(f"Note: This uses exhaustive comparison (all pairs)")
     print(f"Expected comparisons: {len(df) * (len(df) - 1) // 2:,}\n")
     
     start_time = time.time()
-    fuzzy_pairs = detector.detect_fuzzy_duplicates(df, threshold=threshold)
+    fuzzy_pairs = detector.detect_fuzzy_duplicates(df)
     elapsed_time = time.time() - start_time
     
     print(f"\n📊 Results:")
@@ -111,64 +147,53 @@ def test_fuzzy_duplicates(df, threshold=0.8):
             print(f"   Pair {pair_num}: Row {idx1} ↔ Row {idx2} (Similarity: {sim:.2%})")
             print(f"   {'='*65}")
             
-            # Show key columns for comparison
-            key_cols = ['age', 'workclass', 'education', 'occupation', 'marital-status', 'race']
-            available_cols = [col for col in key_cols if col in df.columns]
-            
+            # Show full rows for comparison
             print(f"\n   Row {idx1}:")
-            for col in available_cols:
-                print(f"      {col}: {df.iloc[idx1][col]}")
+            for col, val in df.iloc[idx1].items():
+                print(f"      {col}: {val}")
             print(f"\n   Row {idx2}:")
-            for col in available_cols:
-                print(f"      {col}: {df.iloc[idx2][col]}")
+            for col, val in df.iloc[idx2].items():
+                print(f"      {col}: {val}")
             print()
-        
-        print(f"\n⚠️  IMPORTANT: Review these pairs carefully!")
-        print(f"   Fuzzy matching may detect both:")
-        print(f"   - True duplicates (same person with typos)")
-        print(f"   - Similar records (different people with similar attributes)")
     else:
-        print(f"\n✓ No fuzzy duplicates found at threshold {threshold}")
+        print(f"\n✓ No fuzzy duplicates found at threshold 0.80")
     
     print(f"\n{'='*70}\n")
     return detector, fuzzy_pairs
 
 def main():
-    """Run duplicate detection on Adult dataset - Execution Time Analysis"""
     print(f"\n{'='*70}")
     print("DUPLICATE DETECTION - ADULT DATASET")
     print(f"{'='*70}")
     
     overall_start = time.time()
     
-    # Configuration - Execution Time Analysis
+    # Configuration 
     # Test different sample sizes to validate O(n²) complexity
-    # Uncomment ONE sample size at a time to run each test
-    
-    THRESHOLD = 0.8
+    # Uncomment one sample size at a time to run each test
     
     #test 2
-    #SAMPLE_SIZE = 1000
-    #RANDOM_STATE = 101
+    # SAMPLE_SIZE = 1000
+    # RANDOM_STATE = 101
     
     #test 3
-    SAMPLE_SIZE = 2000
-    RANDOM_STATE = 102
+    # SAMPLE_SIZE = 2000
+    # RANDOM_STATE = 102
     
     #test 1
-    # SAMPLE_SIZE = 4000
-    # RANDOM_STATE = 42
+    SAMPLE_SIZE = 4000
+    RANDOM_STATE = 42
     
-    # Load data
+    #load data
     df, total_rows = load_adult_data(sample_size=SAMPLE_SIZE, random_state=RANDOM_STATE)
     
-    # Step 1: Detect exact duplicates
+    #detect exact duplicates
     exact_detector, exact_duplicates = test_exact_duplicates(df)
     
-    # Step 2: Detect fuzzy duplicates
-    fuzzy_detector, fuzzy_pairs = test_fuzzy_duplicates(df, threshold=THRESHOLD)
+    #detect fuzzy duplicates
+    fuzzy_detector, fuzzy_pairs = test_fuzzy_duplicates(df)
     
-    # Step 3: Interactive fuzzy duplicate removal (if any found)
+    #interactive fuzzy duplicate removal (if any found)
     if len(fuzzy_pairs) > 0:
         print(f"\n{'='*70}")
         print("STEP 3: INTERACTIVE FUZZY DUPLICATE REMOVAL")
@@ -183,7 +208,7 @@ def main():
         print(f"\n✓ No fuzzy duplicates found - no removal needed")
         df_cleaned = df
     
-    # Save results using detector's built-in method
+    #save results
     print(f"\n{'='*70}")
     print("SAVING RESULTS")
     print(f"{'='*70}\n")
@@ -202,7 +227,7 @@ def main():
     print(f"Random state: {RANDOM_STATE}")
     print(f"\nResults:")
     print(f"   Exact duplicates: {len(exact_duplicates):,}")
-    print(f"   Fuzzy duplicate pairs: {len(fuzzy_pairs):,} (threshold={THRESHOLD})")
+    print(f"   Fuzzy duplicate pairs: {len(fuzzy_pairs):,} (threshold=0.80)")
     print(f"\n⏱️  Total Execution Time: {overall_time:.2f} seconds ({overall_time/60:.2f} minutes)")
     print(f"\nExpected comparisons: {len(df) * (len(df) - 1) // 2:,}")
     print(f"Time per comparison: {(overall_time / (len(df) * (len(df) - 1) // 2)) * 1000:.4f} ms")

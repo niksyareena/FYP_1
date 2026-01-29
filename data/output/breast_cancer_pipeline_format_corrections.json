@@ -1,0 +1,21 @@
+{
+  "total_corrections": 3,
+  "total_cells_affected": 573,
+  "corrections": [
+    {
+      "column": "all_columns",
+      "operation": "missing_value_standardization",
+      "cells_affected": 9
+    },
+    {
+      "column": "node-caps",
+      "operation": "type_correction (object -> bool)",
+      "cells_affected": 278
+    },
+    {
+      "column": "irradiat",
+      "operation": "type_correction (object -> bool)",
+      "cells_affected": 286
+    }
+  ]
+}

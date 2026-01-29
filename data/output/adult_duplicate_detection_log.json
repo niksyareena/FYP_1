@@ -5,7 +5,7 @@
       "operation": "fuzzy_detection",
       "method": "per_field_threshold",
       "columns_checked": "all",
-      "total_rows": 1000,
+      "total_rows": 4000,
       "fuzzy_pairs_found": 0,
       "threshold": 0.8
     }

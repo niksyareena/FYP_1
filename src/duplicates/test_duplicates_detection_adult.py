@@ -87,8 +87,7 @@ def test_exact_duplicate_detection(df, ground_truth):
         for idx in sorted(false_negatives):
             print(f"   Row {idx}")
     
-    #status = "✓ PASS" if precision == 1.0 and recall == 1.0 else "⚠ PARTIAL"
-    #print(f"\n{status}")
+
     print(f"{'='*70}\n")
     
     return detector, precision, recall, f1
@@ -142,7 +141,7 @@ def test_fuzzy_duplicate_detection(df, ground_truth, threshold=0.75):
             sim = next((s for i1, i2, s in fuzzy_pairs if (min(i1, i2), max(i1, i2)) == (idx1, idx2)), 0)
             print(f"\n   Pair: Row {idx1} ↔ Row {idx2} (similarity: {sim:.2%})")
             
-            # Show key columns for comparison
+            #show key columns for comparison
             cols_to_show = ['workclass', 'education', 'occupation', 'marital-status']
             row1_data = df.iloc[idx1][cols_to_show]
             row2_data = df.iloc[idx2][cols_to_show]

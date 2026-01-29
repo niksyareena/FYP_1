@@ -1,0 +1,25 @@
+{
+  "dataset": "adult",
+  "sample_size": 2000,
+  "random_state": 42,
+  "total_execution_time_seconds": 330.30514192581177,
+  "timings": {
+    "data_loading": 0.04108476638793945,
+    "data_profiling": 0.047720909118652344,
+    "format_correction": 0.04828596115112305,
+    "exact_duplicate_detection": 0.0011851787567138672,
+    "fuzzy_duplicate_detection": 330.1551661491394,
+    "total_pipeline": 330.30514192581177
+  },
+  "modules": {
+    "profiling": {
+      "profile_saved": "adult_pipeline_profile.json"
+    },
+    "format_correction": {
+      "log_saved": "adult_pipeline_format_corrections.json"
+    },
+    "duplicate_detection": {
+      "log_saved": "adult_pipeline_duplicate_detection.json"
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "summary": {
+    "total_rows_analyzed": 2000,
+    "exact_duplicates_found": 0,
+    "exact_duplicates_removed": 0,
+    "fuzzy_duplicate_pairs_found": 0,
+    "fuzzy_duplicates_removed": 0,
+    "total_duplicates_removed": 0
+  },
+  "operations": [
+    {
+      "operation": "exact_detection",
+      "columns_checked": "all",
+      "total_rows": 2000,
+      "duplicates_found": 0,
+      "duplicate_percentage": 0.0
+    },
+    {
+      "operation": "fuzzy_detection",
+      "method": "per_field_threshold",
+      "columns_checked": "all",
+      "total_rows": 2000,
+      "fuzzy_pairs_found": 0,
+      "threshold": 0.8
+    }
+  ]
+}

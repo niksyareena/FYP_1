@@ -1,0 +1,396 @@
+{
+  "dataset_level": {
+    "n_rows": 2000,
+    "n_columns": 21,
+    "dtypes": {
+      "age": "int64",
+      "job": "object",
+      "marital": "object",
+      "education": "object",
+      "default": "object",
+      "housing": "object",
+      "loan": "object",
+      "contact": "object",
+      "month": "object",
+      "day_of_week": "object",
+      "duration": "int64",
+      "campaign": "int64",
+      "pdays": "int64",
+      "previous": "int64",
+      "poutcome": "object",
+      "emp.var.rate": "float64",
+      "cons.price.idx": "float64",
+      "cons.conf.idx": "float64",
+      "euribor3m": "float64",
+      "nr.employed": "float64",
+      "y": "object"
+    },
+    "non_null_counts": {
+      "age": 2000,
+      "job": 1980,
+      "marital": 1995,
+      "education": 1918,
+      "default": 1589,
+      "housing": 1956,
+      "loan": 1956,
+      "contact": 2000,
+      "month": 2000,
+      "day_of_week": 2000,
+      "duration": 2000,
+      "campaign": 2000,
+      "pdays": 2000,
+      "previous": 2000,
+      "poutcome": 2000,
+      "emp.var.rate": 2000,
+      "cons.price.idx": 2000,
+      "cons.conf.idx": 2000,
+      "euribor3m": 2000,
+      "nr.employed": 2000,
+      "y": 2000
+    },
+    "missing_counts": {
+      "age": 0,
+      "job": 20,
+      "marital": 5,
+      "education": 82,
+      "default": 411,
+      "housing": 44,
+      "loan": 44,
+      "contact": 0,
+      "month": 0,
+      "day_of_week": 0,
+      "duration": 0,
+      "campaign": 0,
+      "pdays": 0,
+      "previous": 0,
+      "poutcome": 0,
+      "emp.var.rate": 0,
+      "cons.price.idx": 0,
+      "cons.conf.idx": 0,
+      "euribor3m": 0,
+      "nr.employed": 0,
+      "y": 0
+    },
+    "missing_percentages": {
+      "age": 0.0,
+      "job": 1.0,
+      "marital": 0.25,
+      "education": 4.1,
+      "default": 20.55,
+      "housing": 2.2,
+      "loan": 2.2,
+      "contact": 0.0,
+      "month": 0.0,
+      "day_of_week": 0.0,
+      "duration": 0.0,
+      "campaign": 0.0,
+      "pdays": 0.0,
+      "previous": 0.0,
+      "poutcome": 0.0,
+      "emp.var.rate": 0.0,
+      "cons.price.idx": 0.0,
+      "cons.conf.idx": 0.0,
+      "euribor3m": 0.0,
+      "nr.employed": 0.0,
+      "y": 0.0
+    },
+    "n_duplicates": 0,
+    "duplicate_percentage": 0.0,
+    "memory_mb": 1.48
+  },
+  "numeric_columns": {
+    "columns": {
+      "age": {
+        "count": 2000,
+        "mean": 40.2525,
+        "median": 38,
+        "std": 10.13,
+        "min": 20,
+        "max": 85,
+        "q25": 32,
+        "q75": 48,
+        "skewness": 0.5863
+      },
+      "duration": {
+        "count": 2000,
+        "mean": 266.0265,
+        "median": 183,
+        "std": 266.0751,
+        "min": 0,
+        "max": 3253,
+        "q25": 104,
+        "q75": 326,
+        "skewness": 3.0638
+      },
+      "campaign": {
+        "count": 2000,
+        "mean": 2.533,
+        "median": 2,
+        "std": 2.5589,
+        "min": 1,
+        "max": 35,
+        "q25": 1,
+        "q75": 3,
+        "skewness": 4.382
+      },
+      "pdays": {
+        "count": 2000,
+        "mean": 958.793,
+        "median": 999,
+        "std": 195.7536,
+        "min": 1,
+        "max": 999,
+        "q25": 999,
+        "q75": 999,
+        "skewness": -4.6656
+      },
+      "previous": {
+        "count": 2000,
+        "mean": 0.192,
+        "median": 0,
+        "std": 0.557,
+        "min": 0,
+        "max": 6,
+        "q25": 0,
+        "q75": 0,
+        "skewness": 4.1561
+      },
+      "emp.var.rate": {
+        "count": 2000,
+        "mean": 0.1166,
+        "median": 1.1,
+        "std": 1.5509,
+        "min": -3.4,
+        "max": 1.4,
+        "q25": -1.8,
+        "q75": 1.4,
+        "skewness": -0.7551
+      },
+      "cons.price.idx": {
+        "count": 2000,
+        "mean": 93.5923,
+        "median": 93.918,
+        "std": 0.5753,
+        "min": 92.201,
+        "max": 94.767,
+        "q25": 93.075,
+        "q75": 93.994,
+        "skewness": -0.2234
+      },
+      "cons.conf.idx": {
+        "count": 2000,
+        "mean": -40.5336,
+        "median": -41.8,
+        "std": 4.5546,
+        "min": -50.8,
+        "max": -26.9,
+        "q25": -42.7,
+        "q75": -36.4,
+        "skewness": 0.2451
+      },
+      "euribor3m": {
+        "count": 2000,
+        "mean": 3.6481,
+        "median": 4.857,
+        "std": 1.7265,
+        "min": 0.635,
+        "max": 5.045,
+        "q25": 1.344,
+        "q75": 4.961,
+        "skewness": -0.7439
+      },
+      "nr.employed": {
+        "count": 2000,
+        "mean": 5167.436,
+        "median": 5191.0,
+        "std": 73.4094,
+        "min": 4963.6,
+        "max": 5228.1,
+        "q25": 5099.1,
+        "q75": 5228.1,
+        "skewness": -1.1059
+      }
+    },
+    "correlation_matrix": {
+      "age": {
+        "age": 1.0,
+        "duration": 0.0644,
+        "campaign": 0.0091,
+        "pdays": -0.0284,
+        "previous": 0.0332,
+        "emp.var.rate": -0.0133,
+        "cons.price.idx": -0.0015,
+        "cons.conf.idx": 0.0864,
+        "euribor3m": -0.0078,
+        "nr.employed": -0.0305
+      },
+      "duration": {
+        "age": 0.0644,
+        "duration": 1.0,
+        "campaign": -0.0634,
+        "pdays": -0.045,
+        "previous": 0.0124,
+        "emp.var.rate": -0.0211,
+        "cons.price.idx": 0.0191,
+        "cons.conf.idx": 0.016,
+        "euribor3m": -0.0153,
+        "nr.employed": -0.0353
+      },
+      "campaign": {
+        "age": 0.0091,
+        "duration": -0.0634,
+        "campaign": 1.0,
+        "pdays": 0.0577,
+        "previous": -0.0876,
+        "emp.var.rate": 0.1695,
+        "cons.price.idx": 0.1382,
+        "cons.conf.idx": -0.0088,
+        "euribor3m": 0.1504,
+        "nr.employed": 0.1598
+      },
+      "pdays": {
+        "age": -0.0284,
+        "duration": -0.045,
+        "campaign": 0.0577,
+        "pdays": 1.0,
+        "previous": -0.5985,
+        "emp.var.rate": 0.2799,
+        "cons.price.idx": 0.0625,
+        "cons.conf.idx": -0.0861,
+        "euribor3m": 0.3157,
+        "nr.employed": 0.3963
+      },
+      "previous": {
+        "age": 0.0332,
+        "duration": 0.0124,
+        "campaign": -0.0876,
+        "pdays": -0.5985,
+        "previous": 1.0,
+        "emp.var.rate": -0.4156,
+        "cons.price.idx": -0.1586,
+        "cons.conf.idx": -0.0434,
+        "euribor3m": -0.4674,
+        "nr.employed": -0.5271
+      },
+      "emp.var.rate": {
+        "age": -0.0133,
+        "duration": -0.0211,
+        "campaign": 0.1695,
+        "pdays": 0.2799,
+        "previous": -0.4156,
+        "emp.var.rate": 1.0,
+        "cons.price.idx": 0.7536,
+        "cons.conf.idx": 0.2228,
+        "euribor3m": 0.9708,
+        "nr.employed": 0.8972
+      },
+      "cons.price.idx": {
+        "age": -0.0015,
+        "duration": 0.0191,
+        "campaign": 0.1382,
+        "pdays": 0.0625,
+        "previous": -0.1586,
+        "emp.var.rate": 0.7536,
+        "cons.price.idx": 1.0,
+        "cons.conf.idx": 0.0741,
+        "euribor3m": 0.6575,
+        "nr.employed": 0.4722
+      },
+      "cons.conf.idx": {
+        "age": 0.0864,
+        "duration": 0.016,
+        "campaign": -0.0088,
+        "pdays": -0.0861,
+        "previous": -0.0434,
+        "emp.var.rate": 0.2228,
+        "cons.price.idx": 0.0741,
+        "cons.conf.idx": 1.0,
+        "euribor3m": 0.3,
+        "nr.employed": 0.1248
+      },
+      "euribor3m": {
+        "age": -0.0078,
+        "duration": -0.0153,
+        "campaign": 0.1504,
+        "pdays": 0.3157,
+        "previous": -0.4674,
+        "emp.var.rate": 0.9708,
+        "cons.price.idx": 0.6575,
+        "cons.conf.idx": 0.3,
+        "euribor3m": 1.0,
+        "nr.employed": 0.942
+      },
+      "nr.employed": {
+        "age": -0.0305,
+        "duration": -0.0353,
+        "campaign": 0.1598,
+        "pdays": 0.3963,
+        "previous": -0.5271,
+        "emp.var.rate": 0.8972,
+        "cons.price.idx": 0.4722,
+        "cons.conf.idx": 0.1248,
+        "euribor3m": 0.942,
+        "nr.employed": 1.0
+      }
+    }
+  },
+  "categorical_columns": {
+    "columns": {
+      "job": {
+        "count": 1980,
+        "cardinality": 11,
+        "mode": "admin."
+      },
+      "marital": {
+        "count": 1995,
+        "cardinality": 3,
+        "mode": "married"
+      },
+      "education": {
+        "count": 1918,
+        "cardinality": 7,
+        "mode": "university.degree"
+      },
+      "default": {
+        "count": 1589,
+        "cardinality": 2,
+        "mode": "no"
+      },
+      "housing": {
+        "count": 1956,
+        "cardinality": 2,
+        "mode": "yes"
+      },
+      "loan": {
+        "count": 1956,
+        "cardinality": 2,
+        "mode": "no"
+      },
+      "contact": {
+        "count": 2000,
+        "cardinality": 2,
+        "mode": "cellular"
+      },
+      "month": {
+        "count": 2000,
+        "cardinality": 10,
+        "mode": "may"
+      },
+      "day_of_week": {
+        "count": 2000,
+        "cardinality": 5,
+        "mode": "tue"
+      },
+      "poutcome": {
+        "count": 2000,
+        "cardinality": 3,
+        "mode": "nonexistent"
+      },
+      "y": {
+        "count": 2000,
+        "cardinality": 2,
+        "mode": "no"
+      }
+    }
+  }
+}

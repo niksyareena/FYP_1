@@ -1,0 +1,26 @@
+{
+  "total_corrections": 4,
+  "total_cells_affected": 8000,
+  "corrections": [
+    {
+      "column": "month",
+      "operation": "date_standardization (dd/mm/yyyy)",
+      "cells_affected": 2000
+    },
+    {
+      "column": "day_of_week",
+      "operation": "date_standardization (dd/mm/yyyy)",
+      "cells_affected": 2000
+    },
+    {
+      "column": "pdays",
+      "operation": "date_standardization (dd/mm/yyyy)",
+      "cells_affected": 2000
+    },
+    {
+      "column": "y",
+      "operation": "type_correction (object -> bool)",
+      "cells_affected": 2000
+    }
+  ]
+}

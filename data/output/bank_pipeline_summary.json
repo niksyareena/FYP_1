@@ -1,0 +1,25 @@
+{
+  "dataset": "bank",
+  "sample_size": 2000,
+  "random_state": 42,
+  "total_execution_time_seconds": 378.0813148021698,
+  "timings": {
+    "data_loading": 0.01504826545715332,
+    "data_profiling": 0.05150794982910156,
+    "format_correction": 0.7286291122436523,
+    "exact_duplicate_detection": 0.002427339553833008,
+    "fuzzy_duplicate_detection": 377.27318692207336,
+    "total_pipeline": 378.0813148021698
+  },
+  "modules": {
+    "profiling": {
+      "profile_saved": "bank_pipeline_profile.json"
+    },
+    "format_correction": {
+      "log_saved": "bank_pipeline_format_corrections.json"
+    },
+    "duplicate_detection": {
+      "log_saved": "bank_pipeline_duplicate_detection.json"
+    }
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "summary": {
+    "total_rows_analyzed": 286,
+    "exact_duplicates_found": 14,
+    "exact_duplicates_removed": 14,
+    "fuzzy_duplicate_pairs_found": 6,
+    "fuzzy_duplicates_removed": 0,
+    "total_duplicates_removed": 14
+  },
+  "operations": [
+    {
+      "operation": "exact_detection",
+      "columns_checked": "all",
+      "total_rows": 286,
+      "duplicates_found": 14,
+      "duplicate_percentage": 4.9
+    },
+    {
+      "operation": "removal",
+      "columns_checked": "all",
+      "keep_strategy": "first",
+      "original_rows": 286,
+      "duplicates_removed": 14,
+      "remaining_rows": 272,
+      "reduction_percentage": 4.9
+    },
+    {
+      "operation": "fuzzy_detection",
+      "method": "per_field_threshold",
+      "columns_checked": "all",
+      "total_rows": 272,
+      "fuzzy_pairs_found": 6,
+      "threshold": 0.8
+    }
+  ],
+  "fuzzy_duplicate_pairs": [
+    {
+      "index1": 2,
+      "index2": 199,
+      "similarity": 0.991891891891892
+    },
+    {
+      "index1": 34,
+      "index2": 267,
+      "similarity": 0.991891891891892
+    },
+    {
+      "index1": 45,
+      "index2": 225,
+      "similarity": 0.991891891891892
+    },
+    {
+      "index1": 46,
+      "index2": 202,
+      "similarity": 0.991891891891892
+    },
+    {
+      "index1": 88,
+      "index2": 195,
+      "similarity": 0.991891891891892
+    },
+    {
+      "index1": 104,
+      "index2": 201,
+      "similarity": 0.991891891891892
+    }
+  ]
+}

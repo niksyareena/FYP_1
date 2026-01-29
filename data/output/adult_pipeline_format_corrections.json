@@ -1,0 +1,51 @@
+{
+  "total_corrections": 9,
+  "total_cells_affected": 15716,
+  "corrections": [
+    {
+      "column": "all_columns",
+      "operation": "missing_value_standardization",
+      "cells_affected": 292
+    },
+    {
+      "column": "workclass",
+      "operation": "string_normalization (case=lower)",
+      "cells_affected": 1875
+    },
+    {
+      "column": "education",
+      "operation": "string_normalization (case=lower)",
+      "cells_affected": 1716
+    },
+    {
+      "column": "marital-status",
+      "operation": "string_normalization (case=lower)",
+      "cells_affected": 2000
+    },
+    {
+      "column": "occupation",
+      "operation": "string_normalization (case=lower)",
+      "cells_affected": 1875
+    },
+    {
+      "column": "relationship",
+      "operation": "string_normalization (case=lower)",
+      "cells_affected": 2000
+    },
+    {
+      "column": "race",
+      "operation": "string_normalization (case=lower)",
+      "cells_affected": 2000
+    },
+    {
+      "column": "sex",
+      "operation": "string_normalization (case=lower)",
+      "cells_affected": 2000
+    },
+    {
+      "column": "native-country",
+      "operation": "string_normalization (case=lower)",
+      "cells_affected": 1958
+    }
+  ]
+}

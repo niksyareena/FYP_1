@@ -1,0 +1,26 @@
+{
+  "dataset": "breast cancer",
+  "sample_size": "FULL",
+  "total_rows": 286,
+  "random_state": 42,
+  "total_execution_time_seconds": 86.78867983818054,
+  "timings": {
+    "data_loading": 0.007010936737060547,
+    "data_profiling": 0.02034616470336914,
+    "format_correction": 0.0186460018157959,
+    "exact_duplicate_detection": 0.001322031021118164,
+    "fuzzy_duplicate_detection": 5.838086128234863,
+    "total_pipeline": 86.78867983818054
+  },
+  "modules": {
+    "profiling": {
+      "profile_saved": "breast_cancer_pipeline_profile.json"
+    },
+    "format_correction": {
+      "log_saved": "breast_cancer_pipeline_format_corrections.json"
+    },
+    "duplicate_detection": {
+      "log_saved": "breast_cancer_pipeline_duplicate_detection.json"
+    }
+  }
+}
