@@ -467,8 +467,15 @@ class FormatCorrector:
         
         print(f"✓ Corrections log saved to {filepath}")
     
-    def print_summary(self):
+    def print_summary(self, df_before: Optional[pd.DataFrame] = None, df_after: Optional[pd.DataFrame] = None, num_rows: int = 5):
+        """
+        Print corrections summary and optionally display before/after comparison
         
+        Args:
+            df_before: Original dataframe before corrections (optional)
+            df_after: Corrected dataframe after corrections (optional)
+            num_rows: Number of rows to display in before/after comparison (default 5)
+        """
         if not self.corrections_log:
             print("No corrections were applied.")
             return
@@ -487,5 +494,44 @@ class FormatCorrector:
         
         for _, row in summary_df.iterrows():
             print(f"   {row['column']:<25} {row['operation']:<30}")
+        
+        print("\n" + "=" * 70)
+        
+        # Display before/after comparison if dataframes provided
+        if df_before is not None and df_after is not None:
+            self.print_before_after_sample(df_before, df_after, num_rows)
+    
+    def print_before_after_sample(self, df_before: pd.DataFrame, df_after: pd.DataFrame, num_rows: int = 5):
+        """
+        Display before/after comparison for corrected columns
+        
+        Args:
+            df_before: Original dataframe before corrections
+            df_after: Corrected dataframe after corrections
+            num_rows: Number of rows to display (default 5)
+        """
+        if not self.corrections_log:
+            return
+        
+        #get list of corrected columns (exclude 'all_columns' meta entry, deduplicate)
+        corrected_cols = list(dict.fromkeys(
+            [item['column'] for item in self.corrections_log if item['column'] != 'all_columns']
+        ))
+        
+        if not corrected_cols:
+            return
+        
+        print("\n" + "=" * 70)
+        print("BEFORE/AFTER COMPARISON (Sample Rows)".center(70))
+        print("=" * 70)
+        
+        for col in corrected_cols:
+            print(f"\n📋 Column: {col}")
+            print(f"   {'Before':<40} {'After':<40}")
+            print(f"   {'-'*40} {'-'*40}")
+            for i in range(min(num_rows, len(df_before))):
+                before = str(df_before[col].iloc[i])[:38]
+                after = str(df_after[col].iloc[i])[:38]
+                print(f"   {before:<40} {after:<40}")
         
         print("\n" + "=" * 70)

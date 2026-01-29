@@ -3,14 +3,14 @@
   "sample_size": "FULL",
   "total_rows": 286,
   "random_state": 42,
-  "total_execution_time_seconds": 86.78867983818054,
+  "total_execution_time_seconds": 18.952356815338135,
   "timings": {
-    "data_loading": 0.007010936737060547,
-    "data_profiling": 0.02034616470336914,
-    "format_correction": 0.0186460018157959,
-    "exact_duplicate_detection": 0.001322031021118164,
-    "fuzzy_duplicate_detection": 5.838086128234863,
-    "total_pipeline": 86.78867983818054
+    "data_loading": 0.0076901912689208984,
+    "data_profiling": 0.022394180297851562,
+    "format_correction": 0.01814723014831543,
+    "exact_duplicate_detection": 0.0021631717681884766,
+    "fuzzy_duplicate_detection": 5.8911659717559814,
+    "total_pipeline": 18.952356815338135
   },
   "modules": {
     "profiling": {

@@ -170,11 +170,15 @@ def run_full_pipeline():
         'string_case': 'lower'
     }
     
+    # Save original dataframe for before/after comparison
+    df_before = df.copy()
+    
     start_time = time.time()
     df_corrected = corrector.correct_formats(df, config)
     timings['format_correction'] = time.time() - start_time
     
-    corrector.print_summary()
+    corrector.print_summary(df_before, df_corrected, num_rows=3)
+    
     print_timing("Module 2 Time", timings['format_correction'])
     
 
@@ -217,7 +221,6 @@ def run_full_pipeline():
         df_corrected = detector.remove_fuzzy_duplicates(df_corrected, interactive=True)
     
 
-
     # PIPELINE COMPLETE
     pipeline_end = time.time()
     total_time = pipeline_end - pipeline_start
@@ -241,19 +244,24 @@ def run_full_pipeline():
         print(f"  {module_name:<35} {format_time(module_time):>18} ({pct:>5.1f}%)")
     
     print("  " + "─" * 76)
-    print(f"  {'TOTAL PIPELINE TIME':<35} {format_time(total_time):>18} (100.0%)")
+    print(f"  {'TOTAL PIPELINE TIME':<35} {format_time(total_time):>18} ")
 
-    # SAVE LOGS
+    #SAVE CLEANED DATA
+    cleaned_data_path = f'data/output/{dataset_filename}_pipeline_cleaned.csv'
+    df_corrected.to_csv(cleaned_data_path, index=False)
+    print(f"  ✓ Cleaned dataset saved to {cleaned_data_path}")
+    
+    #SAVE LOGS
     print("\n" + "═" * 80)
     print("  💾 SAVING LOGS")
     print("═" * 80 + "\n")
     
-    # Save individual module logs
+    #save individual module logs
     profiler.save_report(f'data/output/{dataset_filename}_pipeline_profile.json')
     corrector.save_corrections_log(f'data/output/{dataset_filename}_pipeline_format_corrections.json')
     detector.save_duplicates_log(f'data/output/{dataset_filename}_pipeline_duplicate_detection.json')
     
-    # Save compiled pipeline log
+    #save compiled pipeline log
     import json
     pipeline_log = {
         'dataset': DATASET,
@@ -286,7 +294,7 @@ def run_full_pipeline():
     with open(pipeline_log_path, 'w') as f:
         json.dump(pipeline_log, f, indent=2)
     
-    print(f"  ✓ Pipeline summary saved to {pipeline_log_path}")
+    print(f"✓ Pipeline summary saved to {pipeline_log_path}")
     
     print("\n" + "═" * 80)
     print("  ✅ PIPELINE COMPLETED SUCCESSFULLY")
