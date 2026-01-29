@@ -1,8 +1,6 @@
 {
   "dataset": "breast cancer",
-  "sample_size": "FULL",
   "total_rows": 286,
-  "random_state": 42,
   "total_execution_time_seconds": 18.952356815338135,
   "timings": {
     "data_loading": 0.0076901912689208984,

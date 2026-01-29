@@ -26,8 +26,6 @@ from src.duplicates.duplicate_detector import DuplicateDetector
 # CONFIGURATION 
 
 DATASET = 'breast cancer'
-SAMPLE_SIZE = None  # Set to None for full dataset, or specify number for sampling
-RANDOM_STATE = 42
 
 
 # HELPER FUNCTIONS
@@ -55,17 +53,15 @@ def print_timing(label, seconds):
     print(f"  ⏱  {label}: {format_time(seconds)}")
 
 
-def load_dataset(dataset_name, sample_size, random_state=42):
+def load_dataset(dataset_name):
     """
-    Load the specified dataset with optional sampling
+    Load the specified dataset
     
     Args:
         dataset_name: 'adult', 'bank', or 'breast cancer'
-        sample_size: Number of rows to sample (None = full dataset)
-        random_state: Random seed for reproducibility
     
     Returns:
-        Tuple of (dataframe, full_dataset_size)
+        Loaded dataframe
     """
     print("\n" + "═" * 80)
     print(f"  LOADING DATASET: {dataset_name.upper()}")
@@ -83,28 +79,9 @@ def load_dataset(dataset_name, sample_size, random_state=42):
     else:
         raise ValueError(f"Unknown dataset: {dataset_name}")
     
-    full_size = len(df)
+    print(f"  Loaded: {len(df):,} rows × {len(df.columns)} columns")
     
-    print(f"  Full dataset: {full_size:,} rows × {len(df.columns)} columns")
-    
-    # Check if we should use full dataset
-    if sample_size is None:
-        print(f"  Using FULL dataset (all {full_size:,} rows)")
-        return df, full_size
-    
-    # Validate sample_size
-    if sample_size <= 0:
-        raise ValueError("sample_size must be greater than 0 or None for full dataset")
-    
-    if sample_size >= full_size:
-        print(f"  Sample size ({sample_size:,}) >= full size, using full dataset")
-        return df, full_size
-    
-    # Sample the dataset
-    df = df.sample(n=sample_size, random_state=random_state)
-    print(f"  Sampled: {sample_size:,} rows (random_state={random_state})")
-    
-    return df, full_size
+    return df
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -130,15 +107,14 @@ def run_full_pipeline():
     print("\n" + "═" * 80)
     print("  ⚙  PIPELINE CONFIGURATION")
     print("═" * 80)
-    sample_text = f"{SAMPLE_SIZE:,}" if SAMPLE_SIZE else "FULL"
-    print(f"  Dataset: {DATASET} | Sample: {sample_text} rows | Random State: {RANDOM_STATE} | Fuzzy Threshold: 0.80")
+    print(f"  Dataset: {DATASET} | Fuzzy Threshold: 0.80")
     
     #timing storage
     timings = {}
     
     # LOAD DATASET
     load_start = time.time()
-    df, full_size = load_dataset(DATASET, SAMPLE_SIZE, RANDOM_STATE)
+    df = load_dataset(DATASET)
     timings['data_loading'] = time.time() - load_start
     print_timing("Data Loading Time", timings['data_loading'])
     
@@ -265,9 +241,7 @@ def run_full_pipeline():
     import json
     pipeline_log = {
         'dataset': DATASET,
-        'sample_size': SAMPLE_SIZE if SAMPLE_SIZE else 'FULL',
         'total_rows': len(df),
-        'random_state': RANDOM_STATE,
         'total_execution_time_seconds': total_time,
         'timings': {
             'data_loading': timings['data_loading'],
