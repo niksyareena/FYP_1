@@ -1,15 +1,16 @@
 {
   "dataset": "adult",
   "sample_size": 2000,
+  "total_rows": 2000,
   "random_state": 42,
-  "total_execution_time_seconds": 330.30514192581177,
+  "total_execution_time_seconds": 499.08805298805237,
   "timings": {
-    "data_loading": 0.04108476638793945,
-    "data_profiling": 0.047720909118652344,
-    "format_correction": 0.04828596115112305,
-    "exact_duplicate_detection": 0.0011851787567138672,
-    "fuzzy_duplicate_detection": 330.1551661491394,
-    "total_pipeline": 330.30514192581177
+    "data_loading": 0.061663150787353516,
+    "data_profiling": 0.062157630920410156,
+    "format_correction": 0.06938815116882324,
+    "exact_duplicate_detection": 0.0016682147979736328,
+    "fuzzy_duplicate_detection": 498.88742303848267,
+    "total_pipeline": 499.08805298805237
   },
   "modules": {
     "profiling": {
